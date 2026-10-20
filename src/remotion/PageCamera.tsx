@@ -1,8 +1,8 @@
 // Moves a virtual camera over a real full-page screenshot along planned
 // segments (src/render/camera.ts), with phrase captions + narration on top.
 import { AbsoluteFill, Audio, Easing, Img, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { SAFE_ZONE } from "../constants";
 import type { Segment, View } from "../render/camera";
+import { captionStyles } from "./caption";
 import { fontStack, useFonts, type FontRef } from "./fonts";
 
 /** One phrase on the scene timeline, in frames: [start, end). */
@@ -56,40 +56,15 @@ export const PageCamera: React.FC<PageCameraProps> = ({ image, imageWidth, segme
   );
 };
 
-/** Caption at the bottom of the format's safe zone (constants.ts SAFE_ZONE). */
+/** Caption at the bottom of the format's safe zone (layout in caption.ts, checked by `qa`). */
 const Caption: React.FC<{ text: string; vertical: boolean; font?: FontRef }> = ({ text, vertical, font }) => {
   const frame = useCurrentFrame(); // relative to the phrase's Sequence
   const { fps, width, height } = useVideoConfig();
-  const z = SAFE_ZONE[vertical ? "9x16" : "16x9"];
+  const s = captionStyles(vertical ? "9x16" : "16x9", width, height, fontStack(font));
   const captionIn = interpolate(frame, [0, fps * 0.2], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: z.left,
-        width: width - z.left - z.right,
-        bottom: z.bottom + (vertical ? 24 : 90), // design breathing room inside the zone
-        display: "flex",
-        justifyContent: "center",
-        maxHeight: height - z.top - z.bottom,
-      }}
-    >
-      <div
-        style={{
-          opacity: captionIn,
-          transform: `translateY(${(1 - captionIn) * 20}px)`,
-          backgroundColor: "rgba(17, 24, 39, 0.94)",
-          color: "#ffffff",
-          fontFamily: fontStack(font),
-          fontWeight: 700,
-          fontSize: vertical ? 54 : 50,
-          lineHeight: 1.25,
-          padding: "20px 32px",
-          borderRadius: 20,
-          textAlign: "center",
-          maxWidth: vertical ? width - z.left - z.right - 40 : 1500,
-        }}
-      >
+    <div style={s.outer}>
+      <div style={{ ...s.inner, opacity: captionIn, transform: `translateY(${(1 - captionIn) * 20}px)` }}>
         {text}
       </div>
     </div>

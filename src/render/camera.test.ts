@@ -44,6 +44,9 @@ test("zoom fits the element at `fill`, centred, and narrows the view", () => {
   assert.ok(z.to.w >= 1080 / 2.5, "capped at MAX_ZOOM");
   const cx = z.to.x + z.to.w / 2;
   assert.ok(Math.abs(cx - 300) < 1, `centred on card x (got ${cx})`);
+  // Vertically: centred between the safe-zone top (288) and the two-line caption band top (1224 − 175).
+  const cy = (3000 + 150 - z.to.y) * (1080 / z.to.w);
+  assert.ok(Math.abs(cy - (288 + 1049) / 2) < 1, `card centre above the caption band (got ${cy})`);
 });
 
 test("narration longer than shots holds the last framing to the end", () => {
@@ -62,4 +65,15 @@ test("views are clamped inside the image", () => {
 
 test("`to` alongside `shots` is rejected", () => {
   assert.throws(() => scene({ to: "h2#a", shots: [{ kind: "hold", seconds: 1 }] }), /ignored when `shots` is set/);
+});
+
+test("segments carry the anchor they frame (`focus`) for caption QA", () => {
+  const s = scene({ from: "h2#a", shots: [
+    { kind: "hold", seconds: 1 },
+    { kind: "zoom", target: "#card", seconds: 1 },
+    { kind: "pan", to: "+1", seconds: 1 },
+    { kind: "cut", to: "h2#a" },
+    { kind: "hold", seconds: 1 },
+  ] });
+  assert.deepEqual(planCamera(s, "9x16", meta, 4, FPS).map((g) => g.focus), ["h2#a", "#card", undefined, "h2#a"]);
 });

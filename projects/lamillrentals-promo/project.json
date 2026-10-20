@@ -12,7 +12,9 @@
   ],
   "voice": "af_heart",
   "approval": {
-    "status": "draft"
+    "status": "approved",
+    "approvedAt": "2026-10-20T23:28:31.667Z",
+    "hash": "e04c88abf9557bd0"
   },
   "captures": [
     {
@@ -96,5 +98,24 @@
         }
       ]
     }
-  ]
+  ],
+  "publish": {
+    "title": "Party & Event Rentals in Salinas & Monterey | LaMill Rentals",
+    "description": "Party and event equipment rentals in Salinas and Monterey, CA. Chairs, tables, tents, and lighting with no minimum order. Call (831) 288-5751.\n\nhttps://lamillrentals.com/",
+    "hashtags": [
+      "#PartyRentals",
+      "#EventRentals",
+      "#Salinas",
+      "#Monterey"
+    ],
+    "channels": [
+      "youtube",
+      "x"
+    ],
+    "utm": {
+      "medium": "social",
+      "campaign": "site-promo",
+      "content": "lamillrentals-promo"
+    }
+  }
 }

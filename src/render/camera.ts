@@ -1,15 +1,20 @@
 // Camera planning (v1.D): compile a scene's shots into keyframed segments over
 // the full-page screenshot. Pure function of (scene, format, capture meta,
 // duration) so it is cache-stable and unit-testable.
-import { FORMATS, type Format } from "../constants.js";
+import { FORMATS, SAFE_ZONE, type Format } from "../constants.js";
 import { VideoMillError } from "../pipeline/step.js";
 import type { Scene, Shot } from "../project/schema.js";
 import type { CaptureMeta } from "../record/site.js";
+import { captionBand } from "../remotion/caption.js";
 
 /** Visible window into the image, in image pixels. Height follows the frame aspect. */
 export type View = { x: number; y: number; w: number };
-/** One camera segment in frames: [start, end), moving from → to (equal = static). */
-export type Segment = { start: number; end: number; from: View; to: View };
+/**
+ * One camera segment in frames: [start, end), moving from → to (equal = static).
+ * `focus` = the anchor the framing is about (zoom target, pan/cut/hold anchor),
+ * which captions must not cover (`qa`, v1.H).
+ */
+export type Segment = { start: number; end: number; from: View; to: View; focus?: string };
 
 const ANCHOR_MARGIN = 0.04; // of frame height, so a heading isn't flush with the top edge
 const MAX_ZOOM = 2.5; // screenshot is captured at 1:1 output pixels; beyond this it gets soft
@@ -37,35 +42,43 @@ export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationS
   };
   /** Full-width view with the anchor near the top of the frame. */
   const at = (a: string): View => (a === "top" ? clamp({ x: 0, y: 0, w: imgW }) : clamp({ x: 0, y: box(a).y - frame.height * ANCHOR_MARGIN, w: imgW }));
-  /** View that fits the element at `fill` of the frame, centred on it. */
+  // Zoom subjects centre in the clear area between the safe-zone top and the
+  // caption band, not the frame centre, so captions don't cover them (v1.H qa).
+  const clearMid = (SAFE_ZONE[f].top + captionBand(f, frame.width, frame.height).top) / 2 / frame.height; // of frame height
+  /** View that fits the element at `fill` of the frame, centred in the clear area. */
   const zoomTo = (a: string, fill: number): View => {
     const b = box(a);
     const w = Math.max(b.w / fill, (b.h / fill) / aspect);
     const cw = Math.min(imgW, Math.max(imgW / MAX_ZOOM, w));
-    return clamp({ w: cw, x: b.x + b.w / 2 - cw / 2, y: b.y + b.h / 2 - (cw * aspect) / 2 });
+    return clamp({ w: cw, x: b.x + b.w / 2 - cw / 2, y: b.y + b.h / 2 - cw * aspect * clearMid });
   };
 
   const fr = f; // framing overrides apply to the scene start (and legacy end)
-  const start = at(scene.framing?.[fr]?.from ?? scene.from);
+  const startAnchor = scene.framing?.[fr]?.from ?? scene.from;
+  const start = at(startAnchor);
+  const anchor = (a: string) => (a === "top" || a.startsWith("+") ? undefined : a);
   const shots: Shot[] = scene.shots ?? legacyShots(scene, f, durationSec);
 
   const segs: Segment[] = [];
   let cur = start;
+  let focus = anchor(startAnchor);
   let t = 0; // frames
   for (const sh of shots) {
-    if (sh.kind === "cut") { cur = at(sh.to); continue; }
-    if (sh.kind === "hold" && sh.at) cur = at(sh.at);
+    if (sh.kind === "cut") { cur = at(sh.to); focus = anchor(sh.to); continue; }
+    if (sh.kind === "hold" && sh.at) { cur = at(sh.at); focus = anchor(sh.at); }
     const target = sh.kind === "hold" ? cur : sh.kind === "pan" ? (sh.to.startsWith("+") ? clamp({ ...cur, y: cur.y + Number(sh.to.slice(1)) * frame.height }) : at(sh.to)) : zoomTo(sh.target, sh.fill);
+    if (sh.kind === "pan") focus = anchor(sh.to);
+    if (sh.kind === "zoom") focus = sh.target;
     if (sh.seconds === undefined) throw new VideoMillError(`scene ${scene.id}: shot not timed — run timeScene() first`);
     const n = Math.max(1, Math.round(sh.seconds * fps));
-    segs.push({ start: t, end: t + n, from: cur, to: target });
+    segs.push({ start: t, end: t + n, from: cur, to: target, focus });
     cur = target;
     t += n;
   }
   // Narration longer than the shots: hold the last framing to the end.
   const total = Math.ceil(durationSec * fps);
-  if (t < total) segs.push({ start: t, end: total, from: cur, to: cur });
-  if (segs.length === 0) segs.push({ start: 0, end: total, from: cur, to: cur });
+  if (t < total) segs.push({ start: t, end: total, from: cur, to: cur, focus });
+  if (segs.length === 0) segs.push({ start: 0, end: total, from: cur, to: cur, focus });
   return segs;
 }
 

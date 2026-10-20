@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.G built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.H shipped (2026-10-20); v1.I in progress. Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.G: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.H–v1.J):
+Built through v1.H: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.I–v1.J):
 
 ```
 videomill/
@@ -19,7 +19,8 @@ videomill/
 │   ├── record/              # Playwright recording (pages + extension popups)
 │   ├── tts/                 # TtsProvider interface + kokoro adapter (ADR-0004)
 │   ├── remotion/            # Remotion root, compositions, scene components
-│   ├── export/              # export folder + manifest writer (ADR-0005)
+│   ├── qa/                  # caption geometry checks (v1.H)
+│   ├── export/              # manifest builder (ADR-0005)
 │   └── constants.ts         # canonical enums: formats, video types, channels
 ├── brands/<id>/             # brand.json + logo/font assets (v1.F); README cites sources
 ├── projects/<slug>/
@@ -33,7 +34,7 @@ videomill/
 
 ### Video pipeline
 
-`source (URL | markdown)` → **record** (Playwright footage + screenshots) → **draft** (Claude Code writes script + storyboard into `project.json`) → **approve** (operator gate; factual claims editable) → **synthesize** (TTS per phrase) → **render** (Remotion, per scene × per format) → **assemble** (concat scenes per format) → **QA** (P1) → **export** (folder + `manifest.json`).
+`source (URL | markdown)` → **record** (Playwright footage + screenshots) → **draft** (Claude Code writes script + storyboard into `project.json`) → **approve** (operator gate; factual claims editable) → **synthesize** (TTS per phrase) → **render** (Remotion, per scene × per format) → **assemble** (concat scenes per format) → **QA** (v1.H: captions, loudness, contact sheet) → **export** (folder + `manifest.json`).
 
 Rules:
 - Every step probes existing state first and is safe to re-run; prints `✓` / `↷` / `✗`.
@@ -46,7 +47,11 @@ Rules:
   - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat (video stream-copied, audio re-encoded) to `scenes/joined-<format>.mp4`.
   - `loudness <format>` *(v1.E)*: two-pass `loudnorm` to −14 LUFS → `<slug>-<format>.mp4`; prints before → after.
   - `captions <format>` *(v1.E)*: `<slug>-<format>.srt` from the phrase timings.
+  - `timeline <format>` *(v1.H)*: `timeline-<format>.json`, what was laid out (per scene: offset, camera segments with `focus`, phrase windows, caption font), for `qa`.
   - `contact sheet <format>`.
+  - After a format's steps, `render` stamps `rendered <format>` = the approval hash it rendered, so `qa` / `export` can tell stale outputs from current ones.
+  - `qa <format>` *(v1.H)*: keyed by the approval hash, `rendered`, the video / SRT / sheet / timeline stamps and the thresholds; writes `qa-<format>.json`. The stamp is set only when every check passes.
+  - `export` *(v1.H)*: keyed by the `qa` stamps, `publish` and `source` (not the commit, so a docs-only commit doesn't re-export).
 - Editing one scene re-voices and re-renders only that scene, then re-assembles (verified 2026-10-20). `--scene <id> --force` forces one scene's TTS and render and leaves the rest cached.
 - Render and approve are separate: render refuses to run unless the current `project.json` content is approved (v1.G, § Storyboard and approval).
 - Claude drafting happens in the operator's Claude Code session editing `project.json`; the CLI makes no LLM calls in v1.
@@ -73,6 +78,8 @@ Rules:
 - If narration runs longer than the shots, the last framing holds to the end.
 - **No shots** = v1.C behaviour, compiled as hold 0.4 s → pan to `to` (or `+screens`) → hold 0.6 s. So every scene renders through one code path.
 - **Rendering:** each frame interpolates the current segment with ease-in-out cubic. Zoom width interpolates in log space so its speed looks even. The image is resized (not CSS-scaled), so Chromium resamples from source pixels.
+- **Zoom framing (v1.H):** the zoom subject is centred between the safe-zone top and the top of a two-line caption band (`captionBand()` in `remotion/caption.ts`), not the frame centre, so captions don't cover it. Found by `qa` on lamillrentals 9:16, where the frame-centred Chairs card sat 22% under the caption.
+- **`focus`:** each segment carries the anchor its framing is about (zoom target, or the pan / cut / hold / scene-`from` anchor; none for `top` and `+N` pans). `qa` uses it as the element captions must not cover.
 - **Finding (2026-10-20):** on 9x16, typical mobile elements are already about 94% of the frame width (lamillrentals.com cards are 1016 of 1080 px). So `zoom` with `fill` ≤ 0.94 can't zoom in; it only recenters on the element. Zoom works as intended on 16x9 (Chairs card at the 2.5× cap). A per-shot minimum scale, if wanted, would be an additive field.
 
 ### Phrases and captions (v1.E)
@@ -100,6 +107,15 @@ Rules:
 - **`approve <slug>`** refreshes the storyboard, prints the script, and writes `approval { status: "approved", approvedAt, hash }` into the raw JSON, so zod defaults aren't written into the file.
 - **`approvalHash()`** covers `captures`, `scenes`, `voice` and `publish`: everything recorded, said, shown or published. `approvalState()` returns `draft` | `approved` | `edited since approval` (stored hash ≠ current). Brand files are not in the hash; they're committed and reviewed as code.
 - **Gate:** `render` calls `requireApproved()` first. If the content changed it prints a `↷` with the old and new hash, then a `✗` naming the storyboard → approve fix.
+
+### QA and export (v1.H)
+
+- **`qa <slug>`** (`src/cli/qa.ts`) refuses unless approved and each format's outputs are `rendered` from the current approval hash. Per format:
+  - **captions** (`src/qa/captions.ts`): each caption is laid out in Playwright Chromium with the render's own styles (`captionStyles()`, shared with `PageCamera`) and brand font, so the measured box is the rendered box. ✗ if the box leaves the safe zone, or covers more than `QA.maxCaptionCover` (10%) of the visible area of a `focus` element in any overlapping segment's start or end view.
+  - **loudness:** integrated within ±`QA.lufsTolerance` (1 LU) of −14 LUFS and true peak ≤ `QA.maxTruePeak` (−1 dBTP).
+  - **contact sheet** exists.
+  - Thresholds in `QA` are VideoMill defaults chosen in v1.H, not platform specs.
+- **`export <slug>`** (`src/cli/export.ts`, `src/export/manifest.ts`) refuses unless approved, every format's `qa` stamp matches the current outputs, and `publish` is set. It copies `video-<f>.mp4` and one `captions.srt` (cue timings are format-independent; it refuses if the formats' SRTs differ) into `exports/<slug>/.tmp-<ts>`, writes `manifest.json`, renames to `<ts>` (UTC, `20261020T232529Z`) and repoints the relative `latest` symlink. `videomillCommit` = `git rev-parse HEAD`; a dirty tree prints `↷`.
 
 ### Extension popup recording (v1.I — riskiest piece, benchmark test)
 
@@ -168,6 +184,7 @@ Change from the v1.A projection: `voice` and `captures` were added at the top le
 ```
 
 - Paths are relative to the export folder.
+- *(v1.H)* `source` is the project's `source` as-is. `durationSec` is ffprobe's, rounded to ms. One `captions` entry, `lang` from `CAPTION_LANG` (`en`).
 - `utm.source` is intentionally absent: the consumer sets it per channel when posting.
 - `channels` is a list of strings from `constants.ts`; v1 values `youtube`, `x` (operator priority). `tiktok` arrives in v2 or later — additive, no schema bump.
 - `fps` default 30 is a v1.B default, not a contract value — consumers read it, never assume it.
@@ -208,12 +225,17 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/cli/index.ts` | arg parsing + dispatch |
 | `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
 | `src/cli/approve.ts` | `storyboard`, `approve`, `requireApproved()` (render gate) |
+| `src/qa/captions.ts` | `Timeline` type, caption box measurement (Playwright), `captionIssues()` (safe zone + subject cover); tests in `captions.test.ts` |
+| `src/export/manifest.ts` | `buildManifest()` (`videomill-export-v1`); tests in `manifest.test.ts` |
+| `src/cli/qa.ts` | `qa`, `qaInputs()`, `requireRendered()` |
+| `src/cli/export.ts` | `export`: gates, atomic folder write, `latest` symlink |
+| `src/remotion/caption.ts` | caption layout (`captionStyles()`, `captionBand()`) shared by render, camera and `qa` |
 | `src/storyboard/build.ts` | storyboard HTML (segment stills per format + script) → PNG via Playwright |
 | `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
 
 ## 5. CLI / UX surface
 
-**Built (v1.C; `storyboard` / `approve` v1.G):**
+**Built (v1.C; `storyboard` / `approve` v1.G; `qa` / `export` v1.H):**
 
 ```
 videomill new <slug> --type <site-promo|build-in-public> --brand <id> --url <page>
@@ -221,6 +243,8 @@ videomill record <slug> [--format <f>] [--force]
 videomill storyboard <slug> [--force]
 videomill approve <slug>
 videomill render <slug> [--scene <id>] [--format <f>] [--force]
+videomill qa <slug> [--format <f>] [--force]
+videomill export <slug> [--force]
 ```
 
 `render` refuses unless approved (§ 2 Storyboard and approval). It also refuses scenes with no narration or captions, and unknown brands. Outputs: `out/<slug>/<slug>-<f>.mp4`, `<slug>-<f>.srt`, `<slug>-<f>-contact.png`, `scenes/{@intro,<id>,@end-card}-<f>.mp4`. `new` refuses an unknown `--brand`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
@@ -257,11 +281,12 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.G shipped (see `shipping-history.md`). Next: v1.H, lamillrentals.com end to end: `qa` gates `export` (plan in `prd.md § 5` design notes).
+v1.H shipped (see `shipping-history.md`). v1.I (extension benchmark) is blocked on the Fiverr reference video + its extension (`prd.md § 7`).
 
 ## 9. Risks
 
 - **Extension popup capture** (§ 2, v1.I) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
+- **`qa` caption geometry is measured, not captured.** Boxes come from Playwright Chromium with the render's styles; Remotion renders with its own Chrome Headless Shell, so glyph metrics can differ by a pixel or so. The cover check samples each overlapping segment's start and end view, not every frame of a move.
 - **Kokoro on CPU** — measured in v1.E at roughly real time per phrase in the container (1.8 s audio in 2.0 s; 2.4 s in 1.4 s). Voice quality vs. the Fiverr benchmark is still unjudged. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).
 - **Image size** — Playwright Chromium + Remotion Chrome Headless Shell + ffmpeg.

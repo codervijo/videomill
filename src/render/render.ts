@@ -102,7 +102,13 @@ export function normalizeLoudness(inPath: string, outPath: string): { before: nu
 
 /** Integrated loudness of a file's audio, in LUFS. */
 export function measureLufs(path: string): number {
-  return parseFloat(measure(path, `loudnorm=I=${LOUDNESS.I}:print_format=json`).input_i);
+  return measureLoudness(path).i;
+}
+
+/** Integrated loudness (LUFS) and true peak (dBTP) of a file's audio. */
+export function measureLoudness(path: string): { i: number; tp: number } {
+  const m = measure(path, `loudnorm=I=${LOUDNESS.I}:print_format=json`);
+  return { i: parseFloat(m.input_i), tp: parseFloat(m.input_tp) };
 }
 
 function measure(path: string, filter: string): Record<string, string> {

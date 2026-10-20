@@ -2,7 +2,9 @@
 import { FORMAT_IDS, type Format } from "../constants.js";
 import { fail, VideoMillError } from "../pipeline/step.js";
 import { approve, storyboard } from "./approve.js";
+import { exportProject } from "./export.js";
 import { newProject } from "./new.js";
+import { qa } from "./qa.js";
 import { record, render } from "./render.js";
 
 const USAGE = `usage:
@@ -11,6 +13,8 @@ const USAGE = `usage:
   videomill storyboard <slug> [--force]       script + a still per camera move → out/<slug>/storyboard.html
   videomill approve <slug>                   approve the current script/storyboard (render needs this)
   videomill render <slug> [--scene <id>] [--format <16x9|9x16>] [--force]
+  videomill qa <slug> [--format <16x9|9x16>] [--force]   captions, loudness, contact sheet (export needs this)
+  videomill export <slug> [--force]          exports/<slug>/<ts>/ + manifest.json for RankMill
 
   --scene <id> --force   re-render just that scene (others come from cache)`;
 
@@ -44,6 +48,8 @@ async function main(argv: string[]): Promise<number> {
       case "storyboard": await storyboard(slug, opts); return 0;
       case "approve": await approve(slug); return 0;
       case "render": await render(slug, opts); return 0;
+      case "qa": await qa(slug, opts); return 0;
+      case "export": await exportProject(slug, opts); return 0;
       default: throw new VideoMillError(`unknown command "${cmd}"\n${USAGE}`);
     }
   } catch (e) {

@@ -12,6 +12,16 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.H — lamillrentals.com end to end; `qa` gates export (shipped 2026-10-20)
+
+- First complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof. `videomill qa <slug>` checks caption overlap (captions inside the safe zone and not over key content), integrated loudness (−14 LUFS within tolerance), and that a contact sheet was produced. `export` refuses unless `qa` passes. Pulled forward from the brief's P1 "Automated QA" row; the remaining P1 QA checks (text clipping, brand spelling, resolution/duration) stay in a later tier.
+  - **Built 2026-10-20:** `qa`, `export`, the timeline file `render` writes for `qa`, and zoom framing that keeps the subject above the caption band (`architecture.md § 2`). "Key content" = the element the shot is about (zoom target, pan / cut / hold anchor).
+  - **Proven on a throwaway approved copy** of `lamillrentals-promo`: render → `qa` first failed on 9:16 (caption covered 22% of the zoomed Chairs card), passed after the zoom fix → `export` wrote `exports/<slug>/<ts>/` + `manifest.json`; re-export skipped; an edit or a re-approval without re-render made `qa` and `export` refuse.
+  - **Real run 2026-10-20:** operator approved `lamillrentals-promo` (hash `e04c88abf9557bd0`) → render → `qa` passed both formats (−14.0 LUFS, TP −1.5) → `exports/lamillrentals-promo/20261020T232945Z/`. Manifest records `ab909ac` from a dirty tree (v1.H uncommitted at export time).
+  - **Remaining to ship:** the operator watches the exported videos.
+  - **Seen:** the video is 21.0 s, under the P0 25–45 s target. Not a v1.H check (duration QA is the later tier); lengthening is a script change for the operator.
+- Tests: caption geometry (3), manifest (1), segment `focus` (1); 20 total.
+
 ## v1.G — Script/storyboard draft + approval gate (shipped 2026-10-20)
 
 - **Gate (shape locked in v1.A):** `render` refuses unless `approval.hash` equals `approvalHash()` of the current content. Any edit to `captures`, `scenes`, `voice` or `publish` makes the project "edited since approval". `publish` was added to the hash because its title and description are factual claims that reach the manifest. Brand files stay outside the hash: they're committed code reviewed in diffs.

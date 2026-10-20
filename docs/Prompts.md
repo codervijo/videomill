@@ -43,3 +43,9 @@
 > Dont use my words exactly -wordsmith it
 
 > commit v1.F and start v1.G
+
+> commit v1.G and start v1.H
+
+> approve lamillrentals-promo and run render, qa, export
+
+> commit v1.H and start v1.I

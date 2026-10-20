@@ -1,5 +1,5 @@
 // `record` and `render` — the per-scene pipeline (docs/architecture.md § 2).
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { CAPTURE, DEFAULT_VOICE, FPS, LOUDNESS, type Format } from "../constants.js";
 import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
@@ -9,7 +9,8 @@ import { hashOf, info, ok, step, StampFile, VideoMillError } from "../pipeline/s
 import type { BrandCardProps } from "../remotion/BrandCard.js";
 import type { PhraseClip } from "../remotion/PageCamera.js";
 import { loadProject, projectDir } from "../project/load.js";
-import { anchorsFor, type Project } from "../project/schema.js";
+import { anchorsFor, approvalHash, type Project } from "../project/schema.js";
+import type { Timeline } from "../qa/captions.js";
 import { captureFiles, recordCapture, type CaptureMeta } from "../record/site.js";
 import { planCamera } from "../render/camera.js";
 import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, writeSrt, type Clip } from "../render/render.js";
@@ -98,6 +99,8 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     const renders: unknown[] = [];
     const cues: { start: number; end: number; text: string }[] = [];
     let offset = 0; // seconds into the assembled video
+    let frames = 0; // same, in frames (timeline for `qa`)
+    const laid: Timeline["scenes"] = [];
     const card = async (name: string, props: BrandCardProps) => {
       const clip = join(out, "scenes", `${name}-${f}.mp4`);
       await step(stamps, `render ${name} ${f}`, { props, brands: brandStamp, code }, [clip],
@@ -105,6 +108,7 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
       clips.push(clip);
       renders.push(stamps.get(`render ${name} ${f}`));
       offset += props.durationInFrames / FPS;
+      frames += props.durationInFrames;
     };
     if (brand.parent && parent) {
       await card("@intro", {
@@ -135,7 +139,9 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
       clips.push(clip);
       renders.push(stamps.get(`render ${s.id} ${f}`));
       for (const ph of phrases) if (ph.caption) cues.push({ start: offset + ph.start / FPS, end: offset + ph.end / FPS, text: ph.caption });
+      laid.push({ id: s.id, capture: s.capture, offset: frames, segments: props.segments, phrases: t.phrases.map(({ caption, start, end }) => ({ caption, start, end })) });
       offset += durationInFrames / FPS;
+      frames += durationInFrames;
     }
     if (brand.endCard) {
       const e = brand.endCard;
@@ -150,14 +156,21 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     const video = join(out, `${slug}-${f}.mp4`);
     const srt = join(out, `${slug}-${f}.srt`);
     const sheet = join(out, `${slug}-${f}-contact.png`);
+    const tlPath = join(out, `timeline-${f}.json`);
+    const timeline: Timeline = { format: f, fps: FPS, font: textFont(brand), scenes: laid };
     await step(stamps, `assemble ${f}`, renders, [joined], async () => concatClips(clips, joined), opts.force);
     await step(stamps, `loudness ${f}`, { joined: stamps.get(`assemble ${f}`), target: LOUDNESS }, [video], async () => {
       const l = normalizeLoudness(joined, video);
       info(`${l.before.toFixed(1)} → ${l.after.toFixed(1)} LUFS (target ${LOUDNESS.I})`);
     }, opts.force);
     await step(stamps, `captions ${f}`, cues, [srt], async () => writeSrt(cues, srt), opts.force);
+    await step(stamps, `timeline ${f}`, timeline, [tlPath], async () => {
+      mkdirSync(out, { recursive: true });
+      writeFileSync(tlPath, JSON.stringify(timeline, null, 2) + "\n");
+    }, opts.force);
     await step(stamps, `contact sheet ${f}`, stamps.get(`loudness ${f}`), [sheet],
       async () => contactSheet(video, sheet, f), opts.force);
+    stamps.set(`rendered ${f}`, approvalHash(p)); // which approved content these outputs are (`qa`/`export` check it)
     if (existsSync(video)) info(`${slug}-${f}.mp4 — ${probeDurationSec(video).toFixed(1)}s, ${cues.length} caption(s)`);
   }
   ok(`outputs in out/${slug}/`);
