@@ -89,12 +89,12 @@ Scene (`kind: "page-scroll"`, the only kind in v1.C):
 | `from` | `"top"` or a Playwright selector (default `"top"`) |
 | `to?` | selector or `"top"`; if absent the pan runs `screens` × frame height from `from` |
 | `screens` | 0–4, default 1 |
-| `narration` | spoken text (one TTS segment until v1.D splits it) |
+| `narration` | spoken text (one TTS segment until v1.E splits it into phrases) |
 | `caption` | burned-in text |
 | `minSeconds` | default 3; scene length = max(minSeconds, narration + 0.6 s) |
 | `framing?` | per-format `{ from?, to? }` overrides |
 
-Change from the v1.A projection: `voice` and `captures` were added at the top level (additive). A scene's `narration` is a single string, not an array; v1.D decides segmenting.
+Change from the v1.A projection: `voice` and `captures` were added at the top level (additive). A scene's `narration` is a single string, not an array; v1.E decides segmenting.
 
 ### `exports/<slug>/<UTC-ts>/manifest.json` — `videomill-export-v1` (locked; ADR-0005)
 
@@ -190,17 +190,17 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.C shipped (see `shipping-history.md`). Next: v1.D, phrase-level captions + SRT, 9:16 safe zone, −14 LUFS (plan in `prd.md § 5` design notes).
+v1.C shipped (see `shipping-history.md`). Next: v1.D, shot primitives (hold, zoom to element, cut) (plan in `prd.md § 5` design notes).
 
 ## 9. Risks
 
 - **Extension popup capture** (§ 2, v1.I) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
-- **Kokoro on CPU** — synthesis speed and voice quality vs. the Fiverr benchmark unknown until v1.D. Mitigation: provider interface (ADR-0004).
+- **Kokoro on CPU** — synthesis speed and voice quality vs. the Fiverr benchmark unknown until v1.E. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).
 - **Image size** — Playwright Chromium + Remotion Chrome Headless Shell + ffmpeg.
 - **Shared dev container** — builder's `dev_container.sh` defaults to container `mb1`; `Makefile.local` sets `CONTAINER_NAME=videomill`, `DOCKER_CMD=docker`, and host port 3333 → 3000.
 - **Root-owned files on the host** — the container runs as root, so `node_modules/`, `.cache/`, `out/`, `projects/*/media/` and `pnpm-lock.yaml` are root-owned on the host. The host user can't delete or edit them without sudo. See § 10.
-- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalization to −14 LUFS (ffmpeg `loudnorm`) is v1.D; the `qa` loudness check is v1.H.
+- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalization to −14 LUFS (ffmpeg `loudnorm`) is v1.E; the `qa` loudness check is v1.H.
 - **Disk** — `node_modules` is 1.6 GB, `.cache` 681 MB, plus the 1.65 GB image. The host had about 26 GB free.
 - **Recordings are gitignored** — a project whose source can't be re-recorded (e.g. the Fiverr reference footage) can't be rebuilt from git alone. Revisit if it bites.
 - **Remotion license** — free tier ends above 3 employees.

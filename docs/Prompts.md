@@ -31,3 +31,5 @@
 > Before v1.D: confirm whether project.json scenes support camera moves (hold, zoom to element, cut). Fold into the plan: v1.D adds phrase-level captions timed from Kokoro, a 9:16 safe zone, and −14 LUFS normalization; v1.E adds a CTA end-card template per brand; v1.G adds a qa command (caption overlap, loudness, contact sheet) that gates export. Add shot primitives as v1.D2 if missing.
 
 > commit v1.C and the plan, then start v1.D
+
+> Accept renumbering and per-phrase Kokoro timing. Order: v1.D = shot primitives (explicit hold with duration, zoom-to-element, cut within scene; recorder stores full anchor bounding boxes). v1.E = TTS + phrase captions + safe zone + −14 LUFS, where each phrase maps to a shot. Shift the rest down. Then commit and start v1.D.
