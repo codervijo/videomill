@@ -1,12 +1,15 @@
 // VideoMill CLI entry point.
 import { FORMAT_IDS, type Format } from "../constants.js";
 import { fail, VideoMillError } from "../pipeline/step.js";
+import { approve, storyboard } from "./approve.js";
 import { newProject } from "./new.js";
 import { record, render } from "./render.js";
 
 const USAGE = `usage:
   videomill new <slug> --type <site-promo|build-in-public> --brand <id> --url <page>
   videomill record <slug> [--format <16x9|9x16>] [--force]
+  videomill storyboard <slug> [--force]       script + a still per camera move → out/<slug>/storyboard.html
+  videomill approve <slug>                   approve the current script/storyboard (render needs this)
   videomill render <slug> [--scene <id>] [--format <16x9|9x16>] [--force]
 
   --scene <id> --force   re-render just that scene (others come from cache)`;
@@ -38,6 +41,8 @@ async function main(argv: string[]): Promise<number> {
     switch (cmd) {
       case "new": newProject(slug, { type: str(flags.type), brand: str(flags.brand), url: str(flags.url) }); return 0;
       case "record": await record(slug, opts); return 0;
+      case "storyboard": await storyboard(slug, opts); return 0;
+      case "approve": await approve(slug); return 0;
       case "render": await render(slug, opts); return 0;
       default: throw new VideoMillError(`unknown command "${cmd}"\n${USAGE}`);
     }

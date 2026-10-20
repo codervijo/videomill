@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { CAPTURE, DEFAULT_VOICE, FPS, LOUDNESS, type Format } from "../constants.js";
 import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
 import { loadBrand } from "../brand/schema.js";
+import { requireApproved } from "./approve.js";
 import { hashOf, info, ok, step, StampFile, VideoMillError } from "../pipeline/step.js";
 import type { BrandCardProps } from "../remotion/BrandCard.js";
 import type { PhraseClip } from "../remotion/PageCamera.js";
@@ -29,7 +30,7 @@ function formatsOf(p: Project, opts: RunOpts): Format[] {
   return opts.format ? [opts.format] : p.formats;
 }
 
-async function recordAll(c: ReturnType<typeof ctx>, formats: Format[], force: boolean): Promise<void> {
+export async function recordAll(c: Pick<ReturnType<typeof ctx>, "p" | "media" | "stamps">, formats: Format[], force: boolean): Promise<void> {
   for (const cap of c.p.captures) {
     const anchors = anchorsFor(c.p, cap.id);
     for (const f of formats) {
@@ -47,6 +48,7 @@ export async function record(slug: string, opts: RunOpts): Promise<void> {
 }
 
 export async function render(slug: string, opts: RunOpts): Promise<void> {
+  requireApproved(slug);
   const c = ctx(slug);
   const { p, media, out, stamps } = c;
   const formats = formatsOf(p, opts);

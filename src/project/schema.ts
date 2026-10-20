@@ -99,9 +99,20 @@ export type Scene = z.infer<typeof Scene>;
 export type Capture = z.infer<typeof Capture>;
 export type Shot = z.infer<typeof Shot>;
 
-/** Hash of the scene content, used for approval (v1.G). */
-export function scenesHash(p: Project): string {
-  return createHash("sha256").update(JSON.stringify({ captures: p.captures, scenes: p.scenes, voice: p.voice })).digest("hex").slice(0, 16);
+/**
+ * Hash of everything the operator approves (v1.G): what is recorded, said,
+ * shown and published. Editing any of it after approval makes the project
+ * "edited since approval" until re-approved.
+ */
+export function approvalHash(p: Project): string {
+  return createHash("sha256").update(JSON.stringify({ captures: p.captures, scenes: p.scenes, voice: p.voice, publish: p.publish })).digest("hex").slice(0, 16);
+}
+
+export type ApprovalState = "draft" | "approved" | "edited since approval";
+
+export function approvalState(p: Project): ApprovalState {
+  if (p.approval.status !== "approved") return "draft";
+  return p.approval.hash === approvalHash(p) ? "approved" : "edited since approval";
 }
 
 /** All anchors a capture must resolve, across scenes and per-format framing. */

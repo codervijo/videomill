@@ -23,7 +23,7 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | v1.D | ✅ | Shot primitives — hold, zoom to element, cut |
 | v1.E | ✅ | Phrase captions (phrase → shot) + SRT + 9:16 safe zone + −14 LUFS |
 | v1.F | ✅ | Brand profiles — LaMill presents its sites; CTA end-card |
-| v1.G | ⏳ | Script/storyboard approval gate |
+| v1.G | ✅ | Script/storyboard draft + approval gate |
 | v1.H | ⏳ | lamillrentals.com end to end — `qa` gates export |
 | v1.I | ⏳ | Benchmark: extension popup + Fiverr repro |
 | v1.J | ⏳ | First build-in-public video |
@@ -90,7 +90,7 @@ Inside the container: `make deps | build | run ARGS="…" | test`.
 - **Notes**: No API keys in v1 — TTS is local Kokoro. First run downloads model weights into `.cache/`.
 
 ## How to run
-`make up && make x T=deps && make x T=run ARGS="render lamillrentals-promo"` → `out/lamillrentals-promo/lamillrentals-promo-{16x9,9x16}.mp4` + contact sheets. New video: `make x T=run ARGS="new <slug> --type site-promo --brand <id> --url <page>"`, fill in `projects/<slug>/project.json` scenes, then `render`. Edit one scene and re-run `render`: only that scene re-renders.
+`make up && make x T=deps`, then per video: `new` → draft scenes (project skill `/videomill-draft`) → `storyboard` (`out/<slug>/storyboard.html`) → operator runs `approve` → `render` → `out/<slug>/<slug>-{16x9,9x16}.mp4` + `.srt` + contact sheets. `render` refuses unless the current content is approved; agents never run `approve` unless the operator says so in that turn. Edit one scene and re-run `render`: only that scene re-renders.
 
 ## Key conventions
 - Never fabricate interfaces or claims: real footage, screenshots and SVGs only.

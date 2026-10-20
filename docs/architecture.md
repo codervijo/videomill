@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.F built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.G built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.F: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand}`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.G–v1.J):
+Built through v1.G: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.H–v1.J):
 
 ```
 videomill/
@@ -48,7 +48,7 @@ Rules:
   - `captions <format>` *(v1.E)*: `<slug>-<format>.srt` from the phrase timings.
   - `contact sheet <format>`.
 - Editing one scene re-voices and re-renders only that scene, then re-assembles (verified 2026-10-20). `--scene <id> --force` forces one scene's TTS and render and leaves the rest cached.
-- Render and approve are separate: render refuses to run unless `project.json` is approved (v1.G).
+- Render and approve are separate: render refuses to run unless the current `project.json` content is approved (v1.G, § Storyboard and approval).
 - Claude drafting happens in the operator's Claude Code session editing `project.json`; the CLI makes no LLM calls in v1.
 
 ### Site recording (v1.B)
@@ -93,6 +93,14 @@ Rules:
 - `src/remotion/BrandCard.tsx`: `intro` / `end` variants inside `SAFE_ZONE`, spring-in, and the opener fades out. `src/remotion/fonts.ts` `useFonts()` registers brand font files via `FontFace` and holds the frame with `delayRender`. Captions use the brand text font.
 - End-card length = max(`endCard.seconds`, `say` audio + 0.6 s); `say` is voiced like a phrase (`tts end-card`).
 
+### Storyboard and approval (v1.G)
+
+- **Draft** = Claude Code in the operator's session following the project skill `.claude/skills/videomill-draft/SKILL.md`. Steps: `record` the page, write shots with `say` from the site's own copy only, use real selectors, run `storyboard`, and hand off. The CLI makes no LLM calls.
+- **`storyboard <slug>`** (`src/storyboard/build.ts`) records if needed, then writes `out/<slug>/storyboard.html` and a full-page Playwright screenshot `storyboard.png`. The page shows the status, hash and brand cards, then one row per camera segment: its landing framing per format, cropped from the recorded screenshot with the same view math as `PageCamera`, plus the line spoken from there and its caption. Silent holds that repeat the row above are dropped. Needs no TTS or Remotion, so it takes about a second. It's a `storyboard` step keyed by the approval hash, status, capture stamps and brands.
+- **`approve <slug>`** refreshes the storyboard, prints the script, and writes `approval { status: "approved", approvedAt, hash }` into the raw JSON, so zod defaults aren't written into the file.
+- **`approvalHash()`** covers `captures`, `scenes`, `voice` and `publish`: everything recorded, said, shown or published. `approvalState()` returns `draft` | `approved` | `edited since approval` (stored hash ≠ current). Brand files are not in the hash; they're committed and reviewed as code.
+- **Gate:** `render` calls `requireApproved()` first. If the content changed it prints a `↷` with the old and new hash, then a `✗` naming the storyboard → approve fix.
+
 ### Extension popup recording (v1.I — riskiest piece, benchmark test)
 
 Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.I.
@@ -112,7 +120,7 @@ Validated by zod (`src/project/schema.ts`, strict: unknown keys are errors). Exa
 | `source` | `{ url?, file? }`, at least one; what the video is about |
 | `formats` | non-empty subset of `["16x9", "9x16"]` |
 | `voice?` | TTS voice id *(added v1.C)*; if absent, the brand's `voice`, else `DEFAULT_VOICE` (`af_heart`) *(default moved v1.F)* |
-| `approval` | `{ status: "draft" \| "approved", approvedAt?, hash? }`, default draft. `hash` = `scenesHash()` over captures + scenes + voice. Enforced from v1.G |
+| `approval` | `{ status: "draft" \| "approved", approvedAt?, hash? }`, default draft. `hash` = `approvalHash()` over captures + scenes + voice + publish; enforced by `render` since v1.G. Written by `videomill approve` only |
 | `captures[]` | `{ id, url }`, pages to record *(added v1.C)* |
 | `scenes[]` | see below; ordered, non-empty, unique ids |
 | `publish?` | `{ title, description, hashtags[], channels[], utm{medium,campaign,content} }`, copied into the manifest (v1.H) |
@@ -188,7 +196,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/brand/schema.ts` | `brand.json` zod schema, `loadBrand()`, `isDark()`; tests in `schema.test.ts` |
 | `src/brand/cards.ts` | brand → card/caption props; `brandHash()`, `stageBrand()` |
 | `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
-| `src/project/schema.ts` | zod schema for `project.json`, `scenesHash()`, `anchorsFor()` |
+| `src/project/schema.ts` | zod schema for `project.json`, `approvalHash()`, `approvalState()`, `anchorsFor()`; tests in `schema.test.ts` |
 | `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
 | `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** JSON (`CaptureMeta` version 2: `{x,y,w,h}` per selector, device px) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
@@ -199,19 +207,23 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderClip()` → `renderMedia` (h264, concurrency 4, `enforceAudioTrack`); `concatClips()`; `normalizeLoudness()` / `measureLufs()`; `writeSrt()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
 | `src/cli/index.ts` | arg parsing + dispatch |
 | `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
+| `src/cli/approve.ts` | `storyboard`, `approve`, `requireApproved()` (render gate) |
+| `src/storyboard/build.ts` | storyboard HTML (segment stills per format + script) → PNG via Playwright |
 | `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
 
 ## 5. CLI / UX surface
 
-**Built (v1.C):**
+**Built (v1.C; `storyboard` / `approve` v1.G):**
 
 ```
 videomill new <slug> --type <site-promo|build-in-public> --brand <id> --url <page>
 videomill record <slug> [--format <f>] [--force]
+videomill storyboard <slug> [--force]
+videomill approve <slug>
 videomill render <slug> [--scene <id>] [--format <f>] [--force]
 ```
 
-`render` refuses scenes with no narration or captions, and unknown brands. Outputs: `out/<slug>/<slug>-<f>.mp4`, `<slug>-<f>.srt`, `<slug>-<f>-contact.png`, `scenes/{@intro,<id>,@end-card}-<f>.mp4`. `new` refuses an unknown `--brand`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
+`render` refuses unless approved (§ 2 Storyboard and approval). It also refuses scenes with no narration or captions, and unknown brands. Outputs: `out/<slug>/<slug>-<f>.mp4`, `<slug>-<f>.srt`, `<slug>-<f>-contact.png`, `scenes/{@intro,<id>,@end-card}-<f>.mp4`. `new` refuses an unknown `--brand`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
 
 Projected command tree (names firmed per phase; no aliases):
 
@@ -245,7 +257,7 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.F shipped (see `shipping-history.md`). Next: v1.G, script/storyboard draft + approval gate.
+v1.G shipped (see `shipping-history.md`). Next: v1.H, lamillrentals.com end to end: `qa` gates `export` (plan in `prd.md § 5` design notes).
 
 ## 9. Risks
 

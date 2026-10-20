@@ -12,6 +12,16 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.G — Script/storyboard draft + approval gate (shipped 2026-10-20)
+
+- **Gate (shape locked in v1.A):** `render` refuses unless `approval.hash` equals `approvalHash()` of the current content. Any edit to `captures`, `scenes`, `voice` or `publish` makes the project "edited since approval". `publish` was added to the hash because its title and description are factual claims that reach the manifest. Brand files stay outside the hash: they're committed code reviewed in diffs.
+- **No render preview before approval.** The pre-approval review is the storyboard, kept cheap (≈1 s, no TTS or render) so the edit → review loop stays fast. Approving is one command, and the next edit drops it back to draft.
+- **`storyboard`** shows one row per camera segment, each with its landing framing per format and the line spoken there. It's HTML and a Playwright PNG, so Claude can read the PNG during drafting and the operator can open the HTML on the host.
+- **`approve`** edits the raw JSON so the operator's file isn't rewritten with zod defaults, and prints the script it approves.
+- **Draft** is a project skill (`.claude/skills/videomill-draft`), not CLI code. It says to use only the site's own claims, real selectors, then storyboard and stop. Agents never run `approve` unless told to in that turn.
+- **Verified** on a throwaway copy of lamillrentals-promo: approve, then render, then a one-word edit, after which render refused with `↷` and `✗`. The real `lamillrentals-promo` is left **draft** for the operator to approve.
+- Approval tests (2); 15 total.
+
 ## v1.F — Brand profiles: LaMill presents its sites, CTA end-card (shipped 2026-10-20)
 
 - **LaMill is the parent brand; sites are its sub-brands (operator, 2026-10-20).** A site brand names its parent (`parent: { brand: "lamill" }`). Site videos open with a silent 1.5 s card in the parent's look (LaMill logo, "Introducing", site name) and close on the site's own end-card with "Part of [LaMill logo]" under the CTA. The body stays in the site's look. On-screen copy for both lives in `brand.json` (`parent.intro`, `parent.signoff`), with defaults wordsmithed rather than taken verbatim from the request. Alternatives were end sign-off only, or a LaMill frame (caption style + watermark) on every scene.

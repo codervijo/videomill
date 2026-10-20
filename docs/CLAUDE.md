@@ -157,4 +157,5 @@ Things deliberately *not* shipped — don't re-propose without new context. (Add
 - **Reuse operator tooling.** Makefile includes `~/work/projects/builder/Makefile` (overrides in `Makefile.local`); container recipes start from `~/work/projects/b2b/` where one fits. A missing stack (e.g. Remotion) is proposed as an addition to builder, not baked in here.
 - **Scope boundary with RankMill.** VideoMill never posts or reads analytics. Its only output contract is the export folder + `manifest.json`.
 - **No fabrication.** Real footage, screenshots and SVGs only; factual claims in scripts are operator-approved.
+- **Approval is the operator's.** Draft with the `videomill-draft` project skill, then stop at the storyboard. Never run `videomill approve` (or write `approval` into `project.json`) unless the operator says so in that turn.
 - **Brand spelling.** LaMill, never Lamill.
