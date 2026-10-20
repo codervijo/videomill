@@ -19,13 +19,14 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 |---|---|---|
 | v1.A | ✅ | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
 | v1.B | ✅ | Container + POC on lamillrentals.com — 10 s scene, both formats, contact sheet |
-| v1.C | ⏳ | Project file — scenes as data, single-scene re-render |
-| v1.D | ⏳ | TTS interface + Kokoro + captions + SRT |
-| v1.E | ⏳ | Brand profiles — LaMill + lamillrentals.com |
-| v1.F | ⏳ | Script/storyboard approval gate |
-| v1.G | ⏳ | lamillrentals.com end to end + manifest export |
-| v1.H | ⏳ | Benchmark: extension popup + Fiverr repro |
-| v1.I | ⏳ | First build-in-public video |
+| v1.C | ✅ | Project file — scenes as data, single-scene re-render |
+| v1.D | ⏳ | Phrase-level captions + SRT + 9:16 safe zone + −14 LUFS |
+| v1.E | ⏳ | Shot primitives — hold, zoom to element, cut |
+| v1.F | ⏳ | Brand profiles + CTA end-card per brand |
+| v1.G | ⏳ | Script/storyboard approval gate |
+| v1.H | ⏳ | lamillrentals.com end to end — `qa` gates export |
+| v1.I | ⏳ | Benchmark: extension popup + Fiverr repro |
+| v1.J | ⏳ | First build-in-public video |
 
 ## Versioning convention
 
@@ -73,7 +74,7 @@ Host (Docker + make only):
 make up                                        # build image if needed, start `videomill` container, copy builder in
 make x T=deps                                  # pnpm install + Playwright Chromium + Remotion headless shell
 make x T=test                                  # tsc --noEmit
-make x T=run ARGS="render lamillrentals-poc"   # run the CLI in the container
+make x T=run ARGS="render lamillrentals-promo" # run the CLI in the container
 make sh                                        # interactive shell (or: make buildsh)
 make down                                      # stop the container
 ```
@@ -89,7 +90,7 @@ Inside the container: `make deps | build | run ARGS="…" | test`.
 - **Notes**: No API keys in v1 — TTS is local Kokoro. First run downloads model weights into `.cache/`.
 
 ## How to run
-`make up && make x T=deps && make x T=run ARGS="render lamillrentals-poc"` → `out/lamillrentals-poc/scene-{16x9,9x16}.mp4` + `contact-*.png`.
+`make up && make x T=deps && make x T=run ARGS="render lamillrentals-promo"` → `out/lamillrentals-promo/lamillrentals-promo-{16x9,9x16}.mp4` + contact sheets. New video: `make x T=run ARGS="new <slug> --type site-promo --brand <id> --url <page>"`, fill in `projects/<slug>/project.json` scenes, then `render`. Edit one scene and re-run `render`: only that scene re-renders.
 
 ## Key conventions
 - Never fabricate interfaces or claims: real footage, screenshots and SVGs only.

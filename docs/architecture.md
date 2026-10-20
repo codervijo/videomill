@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.B built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.C built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built in v1.B: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/poc.json`, `out/`. The rest is projected (v1.C–v1.I):
+Built through v1.C: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.D–v1.J):
 
 ```
 videomill/
@@ -21,7 +21,7 @@ videomill/
 │   ├── remotion/            # Remotion root, compositions, scene components
 │   ├── export/              # export folder + manifest writer (ADR-0005)
 │   └── constants.ts         # canonical enums: formats, video types, channels
-├── brands/<brand>.json      # brand profiles (v1.E)
+├── brands/<brand>.json      # brand profiles (v1.F)
 ├── projects/<slug>/
 │   ├── project.json         # scenes as data — committed (v1.C)
 │   └── media/               # recordings, screenshots — gitignored, re-recordable
@@ -37,37 +37,64 @@ videomill/
 
 Rules:
 - Every step probes existing state first and is safe to re-run; prints `✓` / `↷` / `✗`.
-- Steps are keyed by content hash (scene data + brand + voice), so changing one scene invalidates only that scene's TTS segments and scene render. This is how single-scene re-render (P0) works: render scene clips individually, then concat.
-- Render and approve are separate: render refuses to run unless `project.json` is approved (v1.F).
+- Steps are keyed by content hash (`out/<slug>/stamps.json`). **Built in v1.C:**
+  - `record <capture> <format>`: keyed by URL, anchors and capture settings.
+  - `tts <scene>`: keyed by narration + voice; the WAV is cached at `media/tts/<hash>.wav`.
+  - `render <scene> <format>`: keyed by props, the capture stamp and `compositionHash()`.
+  - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat with video stream-copied and audio re-encoded.
+  - `contact sheet <format>`.
+- Editing one scene re-voices and re-renders only that scene, then re-assembles (verified 2026-10-20). `--scene <id> --force` forces one scene's TTS and render and leaves the rest cached.
+- Render and approve are separate: render refuses to run unless `project.json` is approved (v1.G).
 - Claude drafting happens in the operator's Claude Code session editing `project.json`; the CLI makes no LLM calls in v1.
 
 ### Site recording (v1.B)
 
 `src/record/site.ts`, one Chromium context per format:
-- Viewport × `deviceScaleFactor` = output frame width (16x9: 1920 × 1; 9x16: 540 × 2, `isMobile`). So a full-page screenshot maps 1:1 onto video pixels and stays sharp.
+- Viewport × `deviceScaleFactor` = output frame width (16x9: **1280 × 1.5** since v1.C; 9x16: 540 × 2, `isMobile`). So a full-page screenshot maps 1:1 onto video pixels and stays sharp. v1.B used 1920 × 1 for 16x9, which made desktop pages tiny and sparse; 1280 @1.5× reads about 1.5 times larger.
+- **Anchors (v1.C):** every scene `from`/`to` that isn't `"top"` is a Playwright selector. At record time each one is resolved to a device-pixel y offset per format and written to `media/<capture>-<format>.json`. A missing anchor fails the record step with `✗`. Framing per format therefore comes from the real layout: the same heading sits at y=1144 on desktop and y=2048 on mobile.
 - The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
-- The scene (`src/remotion/SiteScroll.tsx`) pans down that PNG: 1 s hold, eased travel of up to 2 screens, 1 s hold. The caption sits clear of the Shorts UI on 9x16, with narration audio underneath.
-- **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.H).
+- The scene (`src/remotion/SiteScroll.tsx`) pans that PNG from `fromY` to `toY` (short hold, eased pan, short hold). The caption sits clear of the Shorts UI on 9x16, with narration audio underneath. Pan range = anchor − 4% of frame height, clamped to the image. When there's no `to`, the pan runs `from` + `screens` × frame height.
+- **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.I).
 
-### Extension popup recording (v1.H — riskiest piece, benchmark test)
+### Extension popup recording (v1.I — riskiest piece, benchmark test)
 
-Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.H.
+Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.I.
 
 ## 3. Data shapes / schemas
 
-### `projects/<slug>/project.json` — `videomill-project-v1` (top-level locked in v1.A; field detail in v1.C)
+### `projects/<slug>/project.json` — `videomill-project-v1` (locked in v1.C)
+
+Validated by zod (`src/project/schema.ts`, strict: unknown keys are errors). Example: `projects/lamillrentals-promo/project.json`.
 
 | Key | Meaning |
 |---|---|
 | `schema` | `"videomill-project-v1"` |
-| `slug` | project id; folder name |
+| `slug` | id (`[a-z0-9-]`); must equal the folder name |
 | `type` | `site-promo` \| `build-in-public` |
-| `brand` | brand profile id (`brands/<brand>.json`) |
-| `source` | `{ url?, file? }` — what the video is about |
-| `formats` | subset of `["16x9", "9x16"]` |
-| `approval` | `{ status: "draft" \| "approved", approvedAt?, hash? }` — hash of scenes at approval; any later edit drops back to draft |
-| `scenes[]` | ordered scenes: `{ id, kind, narration[], media?, framing: { "16x9": …, "9x16": … } }` |
-| `publish` | `{ title, description, hashtags[], channels[], utm }` — copied into the manifest |
+| `brand` | brand profile id (`brands/<brand>.json`, v1.F) |
+| `source` | `{ url?, file? }`, at least one; what the video is about |
+| `formats` | non-empty subset of `["16x9", "9x16"]` |
+| `voice` | TTS voice id, default `af_heart` *(added v1.C)* |
+| `approval` | `{ status: "draft" \| "approved", approvedAt?, hash? }`, default draft. `hash` = `scenesHash()` over captures + scenes + voice. Enforced from v1.G |
+| `captures[]` | `{ id, url }`, pages to record *(added v1.C)* |
+| `scenes[]` | see below; ordered, non-empty, unique ids |
+| `publish?` | `{ title, description, hashtags[], channels[], utm{medium,campaign,content} }`, copied into the manifest (v1.H) |
+
+Scene (`kind: "page-scroll"`, the only kind in v1.C):
+
+| Field | Meaning |
+|---|---|
+| `id` | unique within the project; names the clip |
+| `capture` | a `captures[].id` |
+| `from` | `"top"` or a Playwright selector (default `"top"`) |
+| `to?` | selector or `"top"`; if absent the pan runs `screens` × frame height from `from` |
+| `screens` | 0–4, default 1 |
+| `narration` | spoken text (one TTS segment until v1.D splits it) |
+| `caption` | burned-in text |
+| `minSeconds` | default 3; scene length = max(minSeconds, narration + 0.6 s) |
+| `framing?` | per-format `{ from?, to? }` overrides |
+
+Change from the v1.A projection: `voice` and `captures` were added at the top level (additive). A scene's `narration` is a single string, not an array; v1.D decides segmenting.
 
 ### `exports/<slug>/<UTC-ts>/manifest.json` — `videomill-export-v1` (locked; ADR-0005)
 
@@ -99,9 +126,9 @@ Playwright launches Chromium with a persistent context and the unpacked extensio
 - `channels` is a list of strings from `constants.ts`; v1 values `youtube`, `x` (operator priority). `tiktok` arrives in v2 or later — additive, no schema bump.
 - `fps` default 30 is a v1.B default, not a contract value — consumers read it, never assume it.
 
-### `brands/<brand>.json` (v1.E)
+### `brands/<brand>.json` (v1.F)
 
-Colors, logo path, fonts, TTS voice id, caption style. Shared `lamill` brand plus one per site. Field set locked in v1.E.
+Colors, logo path, fonts, TTS voice id, caption style, and a **CTA end-card template** (appended as the last scene). Shared `lamill` brand plus one per site. Field set locked in v1.F.
 
 ## 4. Modules
 
@@ -109,25 +136,38 @@ Colors, logo path, fonts, TTS voice id, caption style. Shared `lamill` brand plu
 |---|---|
 | `src/constants.ts` | Canonical enums: `FORMATS`, `VIDEO_TYPES`, `CHANNELS`, `FPS`, per-format `CAPTURE` settings |
 | `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
-| `src/record/site.ts` | Playwright capture of a live page (scroll video + full-page PNG) per format |
+| `src/project/schema.ts` | zod schema for `project.json`, `scenesHash()`, `anchorsFor()` |
+| `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
+| `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor offsets JSON |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
 | `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`SiteScroll-16x9` / `SiteScroll-9x16`, duration from props), `SiteScroll.tsx` |
-| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
-| `src/cli/index.ts` | `videomill render <slug> [--force]` |
+| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); `concatClips()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
+| `src/cli/index.ts` | arg parsing + dispatch |
+| `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
+| `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
 
 ## 5. CLI / UX surface
 
-**Built (v1.B):** `videomill render <slug> [--force]`. It reads `projects/<slug>/poc.json` (a temporary format, replaced by `project.json` in v1.C) and runs record → tts → render → contact sheet per format, writing to `out/<slug>/`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
+**Built (v1.C):**
+
+```
+videomill new <slug> --type <site-promo|build-in-public> --brand <id> --url <page>
+videomill record <slug> [--format <f>] [--force]
+videomill render <slug> [--scene <id>] [--format <f>] [--force]
+```
+
+`render` refuses scenes with empty narration or caption. Outputs: `out/<slug>/<slug>-<f>.mp4`, `<slug>-<f>-contact.png`, `scenes/<id>-<f>.mp4`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
 
 Projected command tree (names firmed per phase; no aliases):
 
 ```
 videomill new <slug> --type <site-promo|build-in-public> --brand <id> [--url <u> | --file <md>]   (v1.C)
 videomill record <slug>                                  (v1.B/v1.C)
-videomill approve <slug>                                 (v1.F)
+videomill approve <slug>                                 (v1.G)
 videomill render <slug> [--scene <id>] [--format <f>]    (v1.B → v1.C)
-videomill export <slug>                                  (v1.H)
+videomill qa <slug>                                      (v1.H)
+videomill export <slug>                                  (v1.H; refuses unless qa passes)
 ```
 
 Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a Makefile target that `docker exec`s it. Output: one line per step with `✓ ✗ ↷`, printed live.
@@ -150,17 +190,17 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.B shipped (see `shipping-history.md`). Next: v1.C, `project.json` with scenes as data (plan in `prd.md § 5` design notes).
+v1.C shipped (see `shipping-history.md`). Next: v1.D, phrase-level captions + SRT, 9:16 safe zone, −14 LUFS (plan in `prd.md § 5` design notes).
 
 ## 9. Risks
 
-- **Extension popup capture** (§ 2, v1.H) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
+- **Extension popup capture** (§ 2, v1.I) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
 - **Kokoro on CPU** — synthesis speed and voice quality vs. the Fiverr benchmark unknown until v1.D. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).
 - **Image size** — Playwright Chromium + Remotion Chrome Headless Shell + ffmpeg.
 - **Shared dev container** — builder's `dev_container.sh` defaults to container `mb1`; `Makefile.local` sets `CONTAINER_NAME=videomill`, `DOCKER_CMD=docker`, and host port 3333 → 3000.
 - **Root-owned files on the host** — the container runs as root, so `node_modules/`, `.cache/`, `out/`, `projects/*/media/` and `pnpm-lock.yaml` are root-owned on the host. The host user can't delete or edit them without sudo. See § 10.
-- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalization (ffmpeg `loudnorm`) belongs in v1.D, and checking it in P1 QA.
+- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalization to −14 LUFS (ffmpeg `loudnorm`) is v1.D; the `qa` loudness check is v1.H.
 - **Disk** — `node_modules` is 1.6 GB, `.cache` 681 MB, plus the 1.65 GB image. The host had about 26 GB free.
 - **Recordings are gitignored** — a project whose source can't be re-recorded (e.g. the Fiverr reference footage) can't be rebuilt from git alone. Revisit if it bites.
 - **Remotion license** — free tier ends above 3 employees.

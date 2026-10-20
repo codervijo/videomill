@@ -69,7 +69,7 @@ Strict two-level versioning only: `vN` tier, `vN.X` phase. `vN.A` is always the 
 
 ### v1 — first milestone: lamillrentals.com end to end + Fiverr benchmark + first build-in-public video
 
-Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.com** first, then the Chrome-extension video as the **benchmark test** against the Fiverr reference. Later tiers (not scoped yet): P1 QA automation, P1 build-in-public templates, second-site onboarding, TikTok channel (v2 or later), P2 items. v1 channels are YouTube and X only — highest priority.
+Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.com** first, then the Chrome-extension video as the **benchmark test** against the Fiverr reference. Later tiers (not scoped yet): the rest of P1 QA automation (beyond v1.H's `qa`), P1 build-in-public templates, second-site onboarding, TikTok channel (v2 or later), P2 items. v1 channels are YouTube and X only — highest priority.
 
 #### Phases
 
@@ -77,20 +77,22 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 |---|---|---|
 | v1.A | ✅ done 2026-10-20 | Kickoff / decisions lock — stack, container layout, project-file + manifest schema (ADR-0002–0005) |
 | v1.B | ✅ done 2026-10-20 | Container + POC on lamillrentals.com — builder `video` stack; record the live site; 10 s scene; 16:9 + 9:16; contact sheet |
-| v1.C | ⏳ planned | Project file — scenes as data (`videomill-project-v1`), single-scene re-render |
-| v1.D | ⏳ planned | TTS provider interface + Kokoro adapter + burned-in captions + SRT |
-| v1.E | ⏳ planned | Brand profiles — shared LaMill + lamillrentals.com |
-| v1.F | ⏳ planned | Script/storyboard draft + approval gate |
-| v1.G | ⏳ planned | lamillrentals.com site promo end to end — approve → render → `manifest.json` export (`videomill-export-v1`) |
-| v1.H | ⏳ planned | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
-| v1.I | ⏳ planned | First lamill.io build-in-public video |
+| v1.C | ✅ done 2026-10-20 | Project file — scenes as data (`videomill-project-v1`), single-scene re-render |
+| v1.D | ⏳ planned | TTS + captions — phrase-level captions timed from Kokoro, SRT, 9:16 safe zone, −14 LUFS normalization |
+| v1.E | ⏳ planned | Shot primitives — hold, zoom to element, cut (within a scene) |
+| v1.F | ⏳ planned | Brand profiles — shared LaMill + lamillrentals.com, CTA end-card template per brand |
+| v1.G | ⏳ planned | Script/storyboard draft + approval gate |
+| v1.H | ⏳ planned | lamillrentals.com end to end — `qa` command (caption overlap, loudness, contact sheet) gates `manifest.json` export (`videomill-export-v1`) |
+| v1.I | ⏳ planned | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
+| v1.J | ⏳ planned | First lamill.io build-in-public video |
 
 #### Design notes
 
-- **v1.C** — locks field-level `project.json` shape (top level fixed in `architecture.md § 3`). Single-scene re-render = per-scene clips keyed by content hash, then concat.
-- **v1.D** — per-segment synthesis; captions segment-timed (ADR-0004). Validate CPU speed + voice quality against the Fiverr benchmark; if Kokoro falls short, a hosted provider is a second adapter, not a rewrite.
-- **v1.G** — first complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof.
-- **v1.H** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
+- **v1.D** — kokoro-js has no word or phrase timestamps (ADR-0004), so "timed from Kokoro" means: split each scene's narration into phrases, synthesize each phrase separately, and time each caption from its clip's measured duration. Concatenating the phrase audio gives the scene track. SRT comes from the same timings. **9:16 safe zone:** source the per-platform UI-overlay margins (YouTube Shorts, X) from platform docs. v1.B/C's 360 px bottom padding was a guess, not a sourced value. Captions and key content stay inside the zone. **−14 LUFS:** two-pass ffmpeg `loudnorm` on the assembled track, with integrated loudness measured and printed. Also validate Kokoro CPU speed and voice quality; if it falls short, a hosted provider is a second adapter, not a rewrite.
+- **v1.E** — shot primitives (missing in v1.C; confirmed 2026-10-20). Today a scene can only pan vertically, with fixed holds. A static hold needs `screens: 0`, and cuts happen only between scenes. Planned: a scene carries an optional ordered `shots[]` (`hold` / `pan` / `zoom` to an element's box), with hard cuts between shots. The recorder stores each anchor's full box (x, y, w, h), not just y. Additive to `videomill-project-v1`.
+- **v1.F** — the CTA end-card is a per-brand template appended as the last scene, using brand colors, logo and the URL from `publish`.
+- **v1.H** — first complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof. `videomill qa <slug>` checks caption overlap (captions inside the safe zone and not over key content), integrated loudness (−14 LUFS within tolerance), and that a contact sheet was produced. `export` refuses unless `qa` passes. Pulled forward from the brief's P1 "Automated QA" row; the remaining P1 QA checks (text clipping, brand spelling, resolution/duration) stay in a later tier.
+- **v1.I** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
 
 ## 6. Conformance rules
 
@@ -101,7 +103,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 ## 7. Open questions
 
-- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.H (benchmark). Where do they live? Video is a large binary — keep outside git (e.g. `.cache/reference/`) or a known host path?
+- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.I (benchmark). Where do they live? Video is a large binary — keep outside git (e.g. `.cache/reference/`) or a known host path?
 
 Resolved in v1.A (2026-10-20): CLI language → all TypeScript (ADR-0002); container recipe → new builder `video` stack (ADR-0003); TTS → Kokoro behind a provider interface (ADR-0004); export contract → `videomill-export-v1` (ADR-0005); v1 channels → YouTube + X only, TikTok deferred to v2 or later.
 

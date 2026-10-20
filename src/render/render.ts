@@ -1,6 +1,6 @@
 // Remotion bundle + render, and an ffmpeg contact sheet.
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
@@ -64,10 +64,19 @@ export function contactSheet(videoPath: string, outPath: string, format: Format)
   ]);
 }
 
-/** Width/height from a PNG's IHDR chunk. */
-export function pngSize(path: string): { width: number; height: number } {
-  const buf = readFileSync(path);
-  return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
+/**
+ * Join per-scene clips into one video. Video is stream-copied (all clips come
+ * from the same composition settings); audio is re-encoded to avoid AAC
+ * priming clicks at the joins.
+ */
+export function concatClips(clips: string[], outPath: string): void {
+  mkdirSync(dirname(outPath), { recursive: true });
+  const list = `${outPath}.txt`;
+  writeFileSync(list, clips.map((c) => `file '${resolve(c).replace(/'/g, "'\\''")}'`).join("\n") + "\n");
+  execFileSync("ffmpeg", [
+    "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list,
+    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", outPath,
+  ]);
 }
 
 export function probeDurationSec(path: string): number {

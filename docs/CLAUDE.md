@@ -138,9 +138,9 @@ Designs aligned but not yet executed. When picked up, no need to re-debate.
 
 Field-level shape in `docs/architecture.md § 3`. Additive-only within v1: new optional fields are fine, while any rename, removal, retype or optional→required change bumps to `-v2` and gets a new ADR. Paths in the manifest are relative to the export folder. Exports are written to a temp dir and renamed into place atomically. **Self-check:** "Would RankMill code written against today's manifest still work after my change?"
 
-### 🔒 `project.json` top level `videomill-project-v1` (locked 2026-10-20; field detail in v1.C)
+### 🔒 `project.json` `videomill-project-v1` (top level locked 2026-10-20 in v1.A; fields locked in v1.C)
 
-Top-level keys in `docs/architecture.md § 3`. Any edit to `scenes` after approval drops `approval.status` back to `draft` (via the stored hash). Render never runs on an unapproved project.
+Full field reference in `docs/architecture.md § 3`; the zod schema in `src/project/schema.ts` is the enforcement. Same additive-only rule as the export contract: a new optional field is fine, while a rename, removal or new required field bumps to `-v2`. Anchors are Playwright selectors resolved at record time, never hand-entered pixel offsets. Any edit to `scenes` after approval drops `approval.status` back to `draft` (via the stored hash). Render never runs on an unapproved project.
 
 ## Deferred decisions
 

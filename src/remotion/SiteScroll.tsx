@@ -1,31 +1,33 @@
-// A scene that pans down a real full-page screenshot with a caption + narration.
+// A scene that pans across a real full-page screenshot with a caption + narration.
 import { AbsoluteFill, Audio, Easing, Img, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 
 export type SiteScrollProps = {
-  image: string; // file in publicDir
-  imageHeight: number; // px; image width == frame width
+  image: string; // file in publicDir; image width == frame width
+  fromY: number; // px offset into the image at the start of the scene
+  toY: number; // px offset at the end
   audio: string; // file in publicDir
   caption: string;
   durationInFrames: number;
 };
 
-export const SiteScroll: React.FC<SiteScrollProps> = ({ image, imageHeight, audio, caption }) => {
+export const SiteScroll: React.FC<SiteScrollProps> = ({ image, fromY, toY, audio, caption }) => {
   const frame = useCurrentFrame();
   const { fps, width, height, durationInFrames } = useVideoConfig();
   const vertical = height > width;
 
-  // Hold 1 s, pan up to two screens, hold the last second.
-  const travel = Math.max(0, Math.min(imageHeight - height, height * 2));
-  const y = interpolate(frame, [fps, durationInFrames - fps], [0, -travel], {
+  // Short hold, eased pan, short hold.
+  const holdIn = Math.min(fps * 0.4, durationInFrames * 0.1);
+  const holdOut = Math.min(fps * 0.6, durationInFrames * 0.15);
+  const y = interpolate(frame, [holdIn, durationInFrames - holdOut], [fromY, toY], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
     easing: Easing.inOut(Easing.cubic),
   });
-  const captionIn = interpolate(frame, [fps * 0.3, fps * 0.8], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+  const captionIn = interpolate(frame, [fps * 0.15, fps * 0.5], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#ffffff" }}>
-      <Img src={staticFile(image)} style={{ position: "absolute", top: 0, left: 0, width, transform: `translateY(${y}px)` }} />
+      <Img src={staticFile(image)} style={{ position: "absolute", top: 0, left: 0, width, transform: `translateY(${-y}px)` }} />
       <AbsoluteFill
         style={{
           justifyContent: "flex-end",

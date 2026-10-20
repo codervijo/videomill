@@ -27,3 +27,7 @@
 > fidn latest screenshot - still installing mp4 on my ubuntu
 > (snap Chromium: ERR_ACCESS_DENIED on scene-9x16.mp4)
 > commit this and start v1.C
+
+> Before v1.D: confirm whether project.json scenes support camera moves (hold, zoom to element, cut). Fold into the plan: v1.D adds phrase-level captions timed from Kokoro, a 9:16 safe zone, and −14 LUFS normalization; v1.E adds a CTA end-card template per brand; v1.G adds a qa command (caption overlap, loudness, contact sheet) that gates export. Add shot primitives as v1.D2 if missing.
+
+> commit v1.C and the plan, then start v1.D

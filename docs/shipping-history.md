@@ -12,6 +12,17 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.C — Project file: scenes as data, single-scene re-render (shipped 2026-10-20)
+
+- `projects/<slug>/project.json` (`videomill-project-v1`) validated by a strict zod schema with typed, path-level errors. `new` scaffolds one; `render` refuses empty narration or captions.
+- **Selector anchors instead of pixel offsets.** A scene says `from: 'h2:has-text("Rental Categories")'`. The recorder resolves it per format (desktop y=1144, mobile y=2048 on lamillrentals.com), so one scene definition frames correctly in both formats. Per-format `framing` overrides exist but weren't needed.
+- **Per-scene clips + concat.** Each scene renders to `out/<slug>/scenes/<id>-<f>.mp4`, and the clips are joined with ffmpeg concat (video copied, audio re-encoded to avoid AAC priming clicks). Verified: editing one caption re-rendered one clip per format plus the assemble step, with everything else ✓ cached. `--scene hero --format 9x16 --force` touched one clip.
+- **TTS per scene, cached by text + voice** (`media/tts/<hash>.wav`), so editing narration re-voices one scene.
+- **16x9 capture 1280 × 1.5** (was 1920 × 1 in v1.B): desktop pages were too small to read at 1920 CSS px. The record cache key now includes the capture settings.
+- First real project: `lamillrentals-promo`, 3 scenes (hero → categories → featured), 14.7 s per format. All narration and captions come from the site's own copy.
+- Schema vs. the v1.A projection: `voice` and `captures` were added at the top level (additive). `narration` is a single string, not an array; segmenting is v1.D's decision.
+- Known limit: zod reports cross-field errors (duplicate ids, unknown capture) only once the basic shape is valid.
+
 ## v1.B — Container + POC on lamillrentals.com (shipped 2026-10-20)
 
 All exit criteria met in one pass:

@@ -1,0 +1,56 @@
+{
+  "schema": "videomill-project-v1",
+  "slug": "lamillrentals-promo",
+  "type": "site-promo",
+  "brand": "lamillrentals",
+  "source": {
+    "url": "https://lamillrentals.com/"
+  },
+  "formats": [
+    "16x9",
+    "9x16"
+  ],
+  "voice": "af_heart",
+  "approval": {
+    "status": "draft"
+  },
+  "captures": [
+    {
+      "id": "page",
+      "url": "https://lamillrentals.com/"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "hero",
+      "kind": "page-scroll",
+      "capture": "page",
+      "from": "top",
+      "to": "h2:has-text(\"Rental Categories\")",
+      "screens": 1,
+      "narration": "Party and event rentals in Salinas and Monterey.",
+      "caption": "Party & event rentals in Salinas & Monterey",
+      "minSeconds": 3
+    },
+    {
+      "id": "categories",
+      "kind": "page-scroll",
+      "capture": "page",
+      "from": "h2:has-text(\"Rental Categories\")",
+      "screens": 0.5,
+      "narration": "Chairs, tables, tents, and lighting, delivered across Monterey County.",
+      "caption": "Chairs, tables, tents & lighting",
+      "minSeconds": 3
+    },
+    {
+      "id": "featured",
+      "kind": "page-scroll",
+      "capture": "page",
+      "from": "h2:has-text(\"Featured Rental Items\")",
+      "screens": 0.5,
+      "narration": "No minimum order. Get a quote at lamillrentals.com.",
+      "caption": "No minimum order · Get a quote",
+      "minSeconds": 3
+    }
+  ]
+}

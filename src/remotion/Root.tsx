@@ -2,7 +2,7 @@ import { Composition } from "remotion";
 import { FORMATS, FORMAT_IDS, FPS } from "../constants";
 import { SiteScroll, type SiteScrollProps } from "./SiteScroll";
 
-const defaults: SiteScrollProps = { image: "", imageHeight: 0, audio: "", caption: "", durationInFrames: FPS * 10 };
+const defaults: SiteScrollProps = { image: "", fromY: 0, toY: 0, audio: "", caption: "", durationInFrames: FPS * 5 };
 
 export const Root: React.FC = () => (
   <>

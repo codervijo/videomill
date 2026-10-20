@@ -19,6 +19,6 @@ export const FPS = 30;
 // Browser capture per format. Viewport × deviceScaleFactor = frame width,
 // so full-page screenshots map 1:1 onto output pixels.
 export const CAPTURE: Record<Format, { viewport: { width: number; height: number }; scale: number; mobile: boolean }> = {
-  "16x9": { viewport: { width: 1920, height: 1080 }, scale: 1, mobile: false },
+  "16x9": { viewport: { width: 1280, height: 720 }, scale: 1.5, mobile: false },
   "9x16": { viewport: { width: 540, height: 960 }, scale: 2, mobile: true },
 };
