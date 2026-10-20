@@ -37,3 +37,9 @@
 > commit v1.D and start v1.E
 
 > commit v1.E and start v1.F
+> (v1.F) Q: what does "LaMill brand shared" mean? → "Site + LaMill sign-off".
+> Main brand is LaMill - lamillrentals is a subset of it, so LaMill should "present" lamillrentals.com -one of its sub-sites
+> (v1.F) Q: where does LaMill show up? → "Intro + end sign-off".
+> Dont use my words exactly -wordsmith it
+
+> commit v1.F and start v1.G

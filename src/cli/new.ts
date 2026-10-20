@@ -3,6 +3,7 @@
 import { existsSync } from "node:fs";
 import { FORMAT_IDS, VIDEO_TYPES, type VideoType } from "../constants.js";
 import { ok, VideoMillError } from "../pipeline/step.js";
+import { loadBrand } from "../brand/schema.js";
 import { projectPath, writeProject } from "../project/load.js";
 import { Project, PROJECT_SCHEMA } from "../project/schema.js";
 
@@ -11,6 +12,7 @@ export function newProject(slug: string, opts: { type?: string; brand?: string; 
   if (!opts.type || !VIDEO_TYPES.includes(opts.type as VideoType)) throw new VideoMillError(`--type must be one of: ${VIDEO_TYPES.join(", ")}`);
   if (!opts.brand) throw new VideoMillError("--brand <id> is required");
   if (!opts.url) throw new VideoMillError("--url <page> is required (markdown sources arrive later)");
+  loadBrand(opts.brand); // fails with the path to create if the brand is missing
 
   const parsed = Project.safeParse({
     schema: PROJECT_SCHEMA,

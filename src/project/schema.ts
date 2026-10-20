@@ -67,7 +67,7 @@ export const Project = z.object({
   source: z.object({ url: z.string().url().optional(), file: z.string().optional() }).strict()
     .refine((s) => s.url || s.file, "source needs url or file"),
   formats: z.array(z.enum(FORMAT_IDS)).min(1),
-  voice: z.string().default("af_heart"),
+  voice: z.string().optional(), // else the brand's voice, else DEFAULT_VOICE
   approval: z.object({
     status: z.enum(["draft", "approved"]),
     approvedAt: z.string().optional(),

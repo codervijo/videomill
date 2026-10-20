@@ -1,0 +1,32 @@
+{
+  "schema": "videomill-brand-v1",
+  "id": "lamillrentals",
+  "name": "LaMill Rentals",
+  "logo": {
+    "light": "icon.svg",
+    "withName": true
+  },
+  "colors": {
+    "primary": "#F97316",
+    "onPrimary": "#FFFFFF",
+    "background": "#FFFFFF",
+    "text": "#111827",
+    "muted": "#6B7280"
+  },
+  "fonts": {
+    "text": {
+      "family": "system-ui"
+    }
+  },
+  "endCard": {
+    "headline": "Get a Quote",
+    "url": "lamillrentals.com",
+    "seconds": 3
+  },
+  "parent": {
+    "brand": "lamill",
+    "intro": "Introducing",
+    "introSeconds": 1.5,
+    "signoff": "Part of"
+  }
+}

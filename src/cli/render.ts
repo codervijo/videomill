@@ -1,14 +1,17 @@
 // `record` and `render` — the per-scene pipeline (docs/architecture.md § 2).
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { CAPTURE, FPS, LOUDNESS, type Format } from "../constants.js";
+import { CAPTURE, DEFAULT_VOICE, FPS, LOUDNESS, type Format } from "../constants.js";
+import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
+import { loadBrand } from "../brand/schema.js";
 import { hashOf, info, ok, step, StampFile, VideoMillError } from "../pipeline/step.js";
+import type { BrandCardProps } from "../remotion/BrandCard.js";
 import type { PhraseClip } from "../remotion/PageCamera.js";
 import { loadProject, projectDir } from "../project/load.js";
 import { anchorsFor, type Project } from "../project/schema.js";
 import { captureFiles, recordCapture, type CaptureMeta } from "../record/site.js";
 import { planCamera } from "../render/camera.js";
-import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderScene, writeSrt } from "../render/render.js";
+import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, writeSrt, type Clip } from "../render/render.js";
 import { phrasesOf, timeScene } from "../render/timeline.js";
 import { getTtsProvider, type TtsProvider } from "../tts/provider.js";
 
@@ -53,27 +56,39 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
   const uncaptioned = p.scenes.filter((s) => phrasesOf(s).some((ph) => ph.say && !ph.caption.trim())).map((s) => s.id);
   if (uncaptioned.length) throw new VideoMillError(`scene(s) with narration but no caption: ${uncaptioned.join(", ")}`);
 
-  console.log(`videomill render ${slug} — ${p.scenes.length} scene(s) × ${formats.join(", ")}`);
+  const brand = loadBrand(p.brand);
+  const parent = brand.parent ? loadBrand(brand.parent.brand) : undefined;
+  const voice = p.voice ?? brand.voice ?? DEFAULT_VOICE;
+
+  console.log(`videomill render ${slug} — ${p.scenes.length} scene(s) × ${formats.join(", ")}, brand ${brand.id}${parent ? ` (part of ${parent.id})` : ""}`);
   await recordAll(c, formats, opts.force && !opts.scene);
+  const brandStamp: Record<string, string> = {};
+  for (const b of [brand, parent].filter((x) => x !== undefined)) {
+    brandStamp[b.id] = brandHash(b.id);
+    await step(stamps, `brand ${b.id}`, brandStamp[b.id], [join(media, "brand", b.id, "brand.json")], async () => stageBrand(b.id, media), opts.force);
+  }
 
   // Narration per phrase, cached by text + voice so editing one phrase re-voices only that phrase.
   let tts: TtsProvider | undefined;
+  const voiced = async (name: string, text: string, force: boolean) => {
+    const key = hashOf({ text, voice, provider: "kokoro" });
+    const file = `tts/${key}.wav`;
+    await step(stamps, name, key, [join(media, file)], async () => {
+      tts ??= await getTtsProvider("kokoro");
+      const t0 = performance.now();
+      const r = await tts.synthesize(text, voice, join(media, file));
+      info(`${r.durationSec.toFixed(2)}s audio in ${((performance.now() - t0) / 1000).toFixed(2)}s — "${text}"`);
+    }, force);
+    return { file, sec: probeDurationSec(join(media, file)) };
+  };
   const audio: Record<string, { file?: string; sec: number }[]> = {};
   for (const s of p.scenes) {
     audio[s.id] = [];
     for (const [i, ph] of phrasesOf(s).entries()) {
-      if (!ph.say) { audio[s.id].push({ sec: 0 }); continue; }
-      const key = hashOf({ text: ph.say, voice: p.voice, provider: "kokoro" });
-      const file = `tts/${key}.wav`;
-      await step(stamps, `tts ${s.id}#${i + 1}`, key, [join(media, file)], async () => {
-        tts ??= await getTtsProvider("kokoro");
-        const t0 = performance.now();
-        const r = await tts.synthesize(ph.say, p.voice, join(media, file));
-        info(`${r.durationSec.toFixed(2)}s audio in ${((performance.now() - t0) / 1000).toFixed(2)}s — "${ph.say}"`);
-      }, opts.force && (!opts.scene || opts.scene === s.id));
-      audio[s.id].push({ file, sec: probeDurationSec(join(media, file)) });
+      audio[s.id].push(ph.say ? await voiced(`tts ${s.id}#${i + 1}`, ph.say, opts.force && (!opts.scene || opts.scene === s.id)) : { sec: 0 });
     }
   }
+  const endSay = brand.endCard?.say ? await voiced("tts end-card", brand.endCard.say, opts.force && !opts.scene) : undefined;
 
   const code = compositionHash();
   for (const f of formats) {
@@ -81,6 +96,20 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     const renders: unknown[] = [];
     const cues: { start: number; end: number; text: string }[] = [];
     let offset = 0; // seconds into the assembled video
+    const card = async (name: string, props: BrandCardProps) => {
+      const clip = join(out, "scenes", `${name}-${f}.mp4`);
+      await step(stamps, `render ${name} ${f}`, { props, brands: brandStamp, code }, [clip],
+        () => renderClip(f, { comp: "BrandCard", props }, media, clip, (pct) => info(`${name} ${f} ${pct}%`)), opts.force && !opts.scene);
+      clips.push(clip);
+      renders.push(stamps.get(`render ${name} ${f}`));
+      offset += props.durationInFrames / FPS;
+    };
+    if (brand.parent && parent) {
+      await card("@intro", {
+        variant: "intro", brand: cardBrand(parent), intro: brand.parent.intro, subject: brand.name,
+        durationInFrames: Math.round(brand.parent.introSeconds * FPS),
+      });
+    }
     for (const s of p.scenes) {
       const files = captureFiles(media, s.capture, f);
       const meta: CaptureMeta = JSON.parse(readFileSync(files.meta, "utf8"));
@@ -93,17 +122,26 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
         imageWidth: meta.width,
         segments: planCamera(t.scene, f, meta, t.seconds, FPS),
         phrases,
+        font: textFont(brand),
         durationInFrames,
       };
       const clip = join(out, "scenes", `${s.id}-${f}.mp4`);
-      const inputs = { props, img: stamps.get(`record ${s.capture} ${f}`), code };
+      const inputs = { props, img: stamps.get(`record ${s.capture} ${f}`), brand: brandStamp[brand.id], code };
       await step(stamps, `render ${s.id} ${f}`, inputs, [clip],
-        () => renderScene(f, props, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
+        () => renderClip(f, { comp: "PageCamera", props } satisfies Clip, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
         opts.force && (!opts.scene || opts.scene === s.id));
       clips.push(clip);
       renders.push(stamps.get(`render ${s.id} ${f}`));
       for (const ph of phrases) if (ph.caption) cues.push({ start: offset + ph.start / FPS, end: offset + ph.end / FPS, text: ph.caption });
       offset += durationInFrames / FPS;
+    }
+    if (brand.endCard) {
+      const e = brand.endCard;
+      await card("@end-card", {
+        variant: "end", brand: cardBrand(brand), headline: e.headline, url: e.url, audio: endSay?.file,
+        signoff: brand.parent && parent ? { text: brand.parent.signoff, parent: cardBrand(parent, brand.colors.background) } : undefined,
+        durationInFrames: Math.ceil(Math.max(e.seconds, endSay ? endSay.sec + 0.6 : 0) * FPS),
+      });
     }
 
     const joined = join(out, "scenes", `joined-${f}.mp4`);

@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.E built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.F built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.E: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.F–v1.J):
+Built through v1.F: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand}`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.G–v1.J):
 
 ```
 videomill/
@@ -21,7 +21,7 @@ videomill/
 │   ├── remotion/            # Remotion root, compositions, scene components
 │   ├── export/              # export folder + manifest writer (ADR-0005)
 │   └── constants.ts         # canonical enums: formats, video types, channels
-├── brands/<brand>.json      # brand profiles (v1.F)
+├── brands/<id>/             # brand.json + logo/font assets (v1.F); README cites sources
 ├── projects/<slug>/
 │   ├── project.json         # scenes as data — committed (v1.C)
 │   └── media/               # recordings, screenshots — gitignored, re-recordable
@@ -39,8 +39,10 @@ Rules:
 - Every step probes existing state first and is safe to re-run; prints `✓` / `↷` / `✗`.
 - Steps are keyed by content hash (`out/<slug>/stamps.json`). **Built in v1.C:**
   - `record <capture> <format>`: keyed by URL, anchors and capture settings.
+  - `brand <id>` *(v1.F)*: keyed by a hash of `brands/<id>/`; stages it into `media/brand/<id>/` (Remotion publicDir).
   - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`.
   - `render <scene> <format>`: keyed by props, the capture stamp and `compositionHash()`.
+  - `render @intro|@end-card <format>` *(v1.F)*: brand cards, keyed by props + brand hashes + `compositionHash()`.
   - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat (video stream-copied, audio re-encoded) to `scenes/joined-<format>.mp4`.
   - `loudness <format>` *(v1.E)*: two-pass `loudnorm` to −14 LUFS → `<slug>-<format>.mp4`; prints before → after.
   - `captions <format>` *(v1.E)*: `<slug>-<format>.srt` from the phrase timings.
@@ -83,6 +85,14 @@ Rules:
 - **Loudness:** `normalizeLoudness()` in `render.ts`, two-pass ffmpeg `loudnorm` against `LOUDNESS` (I −14, TP −1.5, LRA 11).
 - **SRT:** `writeSrt()`; cue times are scene offset + phrase window.
 
+### Brands and cards (v1.F)
+
+- **LaMill presents its sites.** A site brand's `parent` (here `lamill`) adds a silent opener in the parent's look before scene 1 (parent logo, `parent.intro`, site name) and a sign-off under the site's end-card CTA (`parent.signoff` + parent logo). Assembled order: `@intro` → scenes → `@end-card`.
+- `src/brand/schema.ts`: `loadBrand()` (typed errors per field path; id must equal the folder; every asset must exist), `isDark()`.
+- `src/brand/cards.ts`: `brandHash()`, `stageBrand()`, `cardBrand(brand, background)` (resolves publicDir paths, picks the logo variant for the background), `textFont()`.
+- `src/remotion/BrandCard.tsx`: `intro` / `end` variants inside `SAFE_ZONE`, spring-in, and the opener fades out. `src/remotion/fonts.ts` `useFonts()` registers brand font files via `FontFace` and holds the frame with `delayRender`. Captions use the brand text font.
+- End-card length = max(`endCard.seconds`, `say` audio + 0.6 s); `say` is voiced like a phrase (`tts end-card`).
+
 ### Extension popup recording (v1.I — riskiest piece, benchmark test)
 
 Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.I.
@@ -98,10 +108,10 @@ Validated by zod (`src/project/schema.ts`, strict: unknown keys are errors). Exa
 | `schema` | `"videomill-project-v1"` |
 | `slug` | id (`[a-z0-9-]`); must equal the folder name |
 | `type` | `site-promo` \| `build-in-public` |
-| `brand` | brand profile id (`brands/<brand>.json`, v1.F) |
+| `brand` | brand id (`brands/<id>/brand.json`, v1.F) |
 | `source` | `{ url?, file? }`, at least one; what the video is about |
 | `formats` | non-empty subset of `["16x9", "9x16"]` |
-| `voice` | TTS voice id, default `af_heart` *(added v1.C)* |
+| `voice?` | TTS voice id *(added v1.C)*; if absent, the brand's `voice`, else `DEFAULT_VOICE` (`af_heart`) *(default moved v1.F)* |
 | `approval` | `{ status: "draft" \| "approved", approvedAt?, hash? }`, default draft. `hash` = `scenesHash()` over captures + scenes + voice. Enforced from v1.G |
 | `captures[]` | `{ id, url }`, pages to record *(added v1.C)* |
 | `scenes[]` | see below; ordered, non-empty, unique ids |
@@ -154,25 +164,39 @@ Change from the v1.A projection: `voice` and `captures` were added at the top le
 - `channels` is a list of strings from `constants.ts`; v1 values `youtube`, `x` (operator priority). `tiktok` arrives in v2 or later — additive, no schema bump.
 - `fps` default 30 is a v1.B default, not a contract value — consumers read it, never assume it.
 
-### `brands/<brand>.json` (v1.F)
+### `brands/<id>/brand.json` — `videomill-brand-v1` (locked in v1.F)
 
-Colors, logo path, fonts, TTS voice id, caption style, and a **CTA end-card template** (appended as the last scene). Shared `lamill` brand plus one per site. Field set locked in v1.F.
+zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the brand folder. Values come from the brand's own site source (`brands/README.md`).
+
+| Key | Meaning |
+|---|---|
+| `schema` | `"videomill-brand-v1"` |
+| `id` | must equal the folder name |
+| `name` | display name, e.g. `LaMill Rentals` |
+| `logo` | `{ light, dark?, withName=false }`. Files for light / dark backgrounds; `withName` = the file is an icon and `name` is rendered beside it |
+| `colors` | `{ primary, onPrimary, background, text, muted }`, `#rrggbb`; `primary` = CTA |
+| `fonts` | `{ text, cta? }`, each `{ family, file?, uppercase=false }`; no `file` = system sans |
+| `voice?` | TTS voice when the project sets none |
+| `endCard?` | `{ headline, url, seconds=3, say? }`, appended after the last scene |
+| `parent?` | `{ brand, intro="Introducing", introSeconds=1.5, signoff="Part of" }`, the brand that presents this one (opener + end-card sign-off) |
 
 ## 4. Modules
 
 | Module | Purpose |
 |---|---|
-| `src/constants.ts` | Canonical enums: `FORMATS`, `VIDEO_TYPES`, `CHANNELS`, `FPS`, per-format `CAPTURE` settings, `SAFE_ZONE`, `LOUDNESS` |
+| `src/constants.ts` | Canonical enums: `FORMATS`, `VIDEO_TYPES`, `CHANNELS`, `FPS`, per-format `CAPTURE` settings, `SAFE_ZONE`, `LOUDNESS`, `DEFAULT_VOICE` |
+| `src/brand/schema.ts` | `brand.json` zod schema, `loadBrand()`, `isDark()`; tests in `schema.test.ts` |
+| `src/brand/cards.ts` | brand → card/caption props; `brandHash()`, `stageBrand()` |
 | `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
 | `src/project/schema.ts` | zod schema for `project.json`, `scenesHash()`, `anchorsFor()` |
 | `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
 | `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** JSON (`CaptureMeta` version 2: `{x,y,w,h}` per selector, device px) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
-| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` |
+| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx`, `BrandCard.tsx` (+ `BrandCard-<f>`), `fonts.ts` |
 | `src/render/camera.ts` | `planCamera()` shots → segments; `shotsSeconds()`; tests in `camera.test.ts` |
 | `src/render/timeline.ts` | `phrasesOf()`, `timeScene()`: phrase audio lengths → timed shots + phrase windows; tests in `timeline.test.ts` |
-| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); `concatClips()`; `normalizeLoudness()` / `measureLufs()`; `writeSrt()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
+| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderClip()` → `renderMedia` (h264, concurrency 4, `enforceAudioTrack`); `concatClips()`; `normalizeLoudness()` / `measureLufs()`; `writeSrt()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
 | `src/cli/index.ts` | arg parsing + dispatch |
 | `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
 | `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
@@ -187,7 +211,7 @@ videomill record <slug> [--format <f>] [--force]
 videomill render <slug> [--scene <id>] [--format <f>] [--force]
 ```
 
-`render` refuses scenes with empty narration or caption. Outputs: `out/<slug>/<slug>-<f>.mp4`, `<slug>-<f>-contact.png`, `scenes/<id>-<f>.mp4`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
+`render` refuses scenes with no narration or captions, and unknown brands. Outputs: `out/<slug>/<slug>-<f>.mp4`, `<slug>-<f>.srt`, `<slug>-<f>-contact.png`, `scenes/{@intro,<id>,@end-card}-<f>.mp4`. `new` refuses an unknown `--brand`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
 
 Projected command tree (names firmed per phase; no aliases):
 
@@ -221,7 +245,7 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.E shipped (see `shipping-history.md`). Next: v1.F, brand profiles + CTA end-card (plan in `prd.md § 5` design notes).
+v1.F shipped (see `shipping-history.md`). Next: v1.G, script/storyboard draft + approval gate.
 
 ## 9. Risks
 

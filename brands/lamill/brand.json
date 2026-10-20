@@ -1,0 +1,22 @@
+{
+  "schema": "videomill-brand-v1",
+  "id": "lamill",
+  "name": "LaMill",
+  "logo": { "light": "logo.svg", "dark": "logo-dark.svg" },
+  "colors": {
+    "primary": "#6AF05F",
+    "onPrimary": "#07090B",
+    "background": "#07090B",
+    "text": "#F1F3EB",
+    "muted": "#7C898A"
+  },
+  "fonts": {
+    "text": { "family": "Inter", "file": "fonts/Inter.ttf" },
+    "cta": { "family": "JetBrains Mono", "file": "fonts/JetBrainsMono.ttf", "uppercase": true }
+  },
+  "endCard": {
+    "headline": "Start a project →",
+    "url": "lamill.io",
+    "seconds": 3
+  }
+}

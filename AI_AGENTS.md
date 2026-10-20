@@ -22,7 +22,7 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | v1.C | ✅ | Project file — scenes as data, single-scene re-render |
 | v1.D | ✅ | Shot primitives — hold, zoom to element, cut |
 | v1.E | ✅ | Phrase captions (phrase → shot) + SRT + 9:16 safe zone + −14 LUFS |
-| v1.F | ⏳ | Brand profiles + CTA end-card per brand |
+| v1.F | ✅ | Brand profiles — LaMill presents its sites; CTA end-card |
 | v1.G | ⏳ | Script/storyboard approval gate |
 | v1.H | ⏳ | lamillrentals.com end to end — `qa` gates export |
 | v1.I | ⏳ | Benchmark: extension popup + Fiverr repro |

@@ -12,6 +12,19 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.F — Brand profiles: LaMill presents its sites, CTA end-card (shipped 2026-10-20)
+
+- **LaMill is the parent brand; sites are its sub-brands (operator, 2026-10-20).** A site brand names its parent (`parent: { brand: "lamill" }`). Site videos open with a silent 1.5 s card in the parent's look (LaMill logo, "Introducing", site name) and close on the site's own end-card with "Part of [LaMill logo]" under the CTA. The body stays in the site's look. On-screen copy for both lives in `brand.json` (`parent.intro`, `parent.signoff`), with defaults wordsmithed rather than taken verbatim from the request. Alternatives were end sign-off only, or a LaMill frame (caption style + watermark) on every scene.
+- **`brands/<id>/brand.json` (`videomill-brand-v1`)** plus assets in the same folder; zod schema in `src/brand/schema.ts`; every asset path is checked at load. `brands/README.md` cites the site source for every value. Nothing is invented:
+  - `lamillrentals`: no logo file or theme exists on the site, so the logo is the lucide 0.344.0 `Warehouse` icon in orange-500 plus the name rendered as text, exactly as `Logo.tsx` does. Colors are the default Tailwind classes the site uses. Font is system sans. CTA "Get a Quote".
+  - `lamill`: `logo.svg` / `logo-dark.svg` from `lamill.io/public/brand/`; colors converted from the site's oklch tokens (approximate); Inter + JetBrains Mono (OFL) committed under `fonts/`; CTA "Start a project →".
+- **Cards** are one Remotion composition, `BrandCard-<f>`, with `intro` and `end` variants, laid out inside the safe zone. Logo variant is picked from the card background's luminance. Fonts load from files via `FontFace` + `delayRender`. Clips are named `@intro` / `@end-card` so they can't collide with scene ids. `renderMedia` now sets `enforceAudioTrack`, so silent cards concat cleanly.
+- **Captions** use the brand's text font.
+- **Voice** precedence: project `voice` → brand `voice` → `DEFAULT_VOICE` (`af_heart`). Project `voice` lost its zod default (still optional, so additive).
+- Brand folders are staged into `media/brand/<id>/` (Remotion's publicDir) by a `brand <id>` step keyed by a hash of the folder; renders depend on that hash.
+- `videomill new` fails early if `--brand` doesn't exist.
+- lamillrentals-promo: 21.0 s per format (1.5 s opener + 16.5 s scenes + 3 s end-card), −14.0 LUFS. Brand tests (2) added; 13 total.
+
 ## v1.E — TTS + phrase captions, SRT, 9:16 safe zone, −14 LUFS (shipped 2026-10-20)
 
 - **Phrase → shot (additive to `videomill-project-v1`).** `hold`/`pan`/`zoom` shots gain optional `say` (one spoken phrase) and `caption` (on-screen text; default `say`). With `say`, `seconds` becomes optional (required → optional, allowed under the additive rule). Scenes whose shots carry phrases must leave scene `narration`/`caption` empty; scenes without them keep v1.B–D whole-scene narration.

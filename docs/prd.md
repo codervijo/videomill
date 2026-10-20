@@ -80,7 +80,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 | v1.C | ✅ done 2026-10-20 | Project file — scenes as data (`videomill-project-v1`), single-scene re-render |
 | v1.D | ✅ done 2026-10-20 | Shot primitives — explicit hold with duration, zoom to element, cut within a scene; recorder stores full anchor boxes |
 | v1.E | ✅ done 2026-10-20 | TTS + captions — phrase-level captions timed from Kokoro (each phrase maps to a shot), SRT, 9:16 safe zone, −14 LUFS |
-| v1.F | ⏳ planned | Brand profiles — shared LaMill + lamillrentals.com, CTA end-card template per brand |
+| v1.F | ✅ done 2026-10-20 | Brand profiles — LaMill presents its sites (opener + sign-off), lamillrentals.com, CTA end-card per brand |
 | v1.G | ⏳ planned | Script/storyboard draft + approval gate |
 | v1.H | ⏳ planned | lamillrentals.com end to end — `qa` command (caption overlap, loudness, contact sheet) gates `manifest.json` export (`videomill-export-v1`) |
 | v1.I | ⏳ planned | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
@@ -88,7 +88,6 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 #### Design notes
 
-- **v1.F** — the CTA end-card is a per-brand template appended as the last scene, using brand colors, logo and the URL from `publish`.
 - **v1.H** — first complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof. `videomill qa <slug>` checks caption overlap (captions inside the safe zone and not over key content), integrated loudness (−14 LUFS within tolerance), and that a contact sheet was produced. `export` refuses unless `qa` passes. Pulled forward from the brief's P1 "Automated QA" row; the remaining P1 QA checks (text clipping, brand spelling, resolution/duration) stay in a later tier.
 - **v1.I** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
 

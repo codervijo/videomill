@@ -6,6 +6,7 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { LOUDNESS, type Format } from "../constants.js";
 import { hashOf, VideoMillError } from "../pipeline/step.js";
+import type { BrandCardProps } from "../remotion/BrandCard.js";
 import type { PageCameraProps } from "../remotion/PageCamera.js";
 
 const ENTRY = resolve("src/remotion/index.ts");
@@ -26,15 +27,19 @@ async function serveUrlFor(publicDir: string): Promise<string> {
   return url;
 }
 
-export async function renderScene(
+/** Composition id → its props. */
+export type Clip = { comp: "PageCamera"; props: PageCameraProps } | { comp: "BrandCard"; props: BrandCardProps };
+
+export async function renderClip(
   format: Format,
-  props: PageCameraProps,
+  clip: Clip,
   publicDir: string,
   outPath: string,
   onProgress?: (pct: number) => void,
 ): Promise<void> {
   const serveUrl = await serveUrlFor(publicDir);
-  const id = `PageCamera-${format}`;
+  const id = `${clip.comp}-${format}`;
+  const props = clip.props;
   const composition = await selectComposition({ serveUrl, id, inputProps: props });
   mkdirSync(dirname(outPath), { recursive: true });
   let last = -1;
@@ -45,6 +50,7 @@ export async function renderScene(
     outputLocation: outPath,
     inputProps: props,
     concurrency: 4,
+    enforceAudioTrack: true, // silent cards still need an audio stream for concat
     chromiumOptions: { enableMultiProcessOnLinux: true },
     onProgress: ({ progress }) => {
       const pct = Math.floor(progress * 10) * 10;

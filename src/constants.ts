@@ -35,3 +35,6 @@ export const SAFE_ZONE: Record<Format, { top: number; right: number; bottom: num
 
 // Loudness target for the assembled track (operator-set in prd.md v1.E); two-pass loudnorm.
 export const LOUDNESS = { I: -14, TP: -1.5, LRA: 11 } as const;
+
+// TTS voice when neither the project nor its brand sets one (Kokoro, ADR-0004).
+export const DEFAULT_VOICE = "af_heart";
