@@ -49,3 +49,10 @@
 > approve lamillrentals-promo and run render, qa, export
 
 > commit v1.H and start v1.I
+
+> Before v1.I: v1.H shipped with known defects. Renumber per the versioning rule and add a fix phase now: no logo intro by default; ≤1s silence between phrases; ~2s end card; "No minimum order" zooms to the hero text; 9:16 captions in a bottom safe zone; fix qa caption-overlap to test caption boxes against visible anchor bounding boxes, with a regression test that fails on export 20261020T233815Z. Duration targets 15–30s (9:16) and 15–45s (16:9). Re-render, re-qa, commit.
+> Then v1.I answers: (1) Fiverr video at <host path> → mount to .cache/reference/. (2) Extension unpacked at <path or repo>. (3) Reproduce same extension and same script beats as the Fiverr video.
+
+> still waiting on fiverr video. we could pause now
+
+> commit the prompt log
