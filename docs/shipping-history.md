@@ -12,6 +12,18 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.E — TTS + phrase captions, SRT, 9:16 safe zone, −14 LUFS (shipped 2026-10-20)
+
+- **Phrase → shot (additive to `videomill-project-v1`).** `hold`/`pan`/`zoom` shots gain optional `say` (one spoken phrase) and `caption` (on-screen text; default `say`). With `say`, `seconds` becomes optional (required → optional, allowed under the additive rule). Scenes whose shots carry phrases must leave scene `narration`/`caption` empty; scenes without them keep v1.B–D whole-scene narration.
+- **Timing from Kokoro.** kokoro-js has no word timestamps (ADR-0004), so each phrase is synthesized separately (`tts <scene>#<n>`, cached per text + voice) and its measured length sets its shot: shot = max(`seconds`, audio + 0.25 s gap). A pan/zoom with its own shorter `seconds` moves, then holds for the rest of the phrase. `src/render/timeline.ts` `timeScene()` resolves this before `planCamera()`; 5 unit tests.
+- **Rendering.** Each phrase is a Remotion `<Sequence>` with its own `<Audio>` and caption, so there's no per-scene WAV concat. Captions show only during their phrase.
+- **SRT** `out/<slug>/<slug>-<f>.srt` from the same frame timings (scene offsets = clip lengths).
+- **9:16 safe zone** `SAFE_ZONE` in `constants.ts`: 288 top / 192 right / 672 bottom / 48 left at 1080×1920. Verified 2026-10-20 against Google's own [YouTube vertical-video ads template](https://services.google.com/fh/files/misc/youtubesafezoneoverlay_vertical_final.png) and diagram on [Google Ads Help 13547298](https://support.google.com/google-ads/answer/13547298); the earlier reap.video / upload-post figures match. No organic-Shorts or X spec exists, so Google's zone is applied to both (assumption). Captions sit inside it, bottom edge 24 px above the zone's bottom. 16x9 has no platform overlay spec (zero insets; the 90 px bottom margin is a design choice).
+- **−14 LUFS.** Two-pass ffmpeg `loudnorm` (I −14, TP −1.5, LRA 11, `linear=true`) on the concatenated track, video stream-copied; the result is re-measured and printed. lamillrentals-promo: −22.8 → −14.0 LUFS.
+- **Kokoro on CPU (container):** 1.82 s of audio in 2.00 s, 2.42 s in 1.38 s, so roughly real time per phrase after model load. Voice quality is the operator's call.
+- Pipeline steps added: `loudness <f>`, `captions <f>`; `assemble` now writes `out/<slug>/scenes/joined-<f>.mp4`.
+- Seen for v1.H: captions on 9:16 still cover page content (e.g. the Chairs card); the `qa` caption-overlap check is v1.H.
+
 ## v1.D — Shot primitives: hold, zoom to element, cut (shipped 2026-10-20)
 
 - `scenes[].shots[]` (additive to `videomill-project-v1`): `hold {seconds, at?}`, `pan {seconds, to}` (`to` = anchor or `"+N"` frame-heights), `zoom {seconds, target, fill=0.85}`, `cut {to}`. `to` together with `shots` is a schema error.

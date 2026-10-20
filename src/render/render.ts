@@ -1,11 +1,11 @@
-// Remotion bundle + render, and an ffmpeg contact sheet.
-import { execFileSync } from "node:child_process";
+// Remotion bundle + render; ffmpeg concat, loudness, SRT and contact sheet.
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import type { Format } from "../constants.js";
-import { hashOf } from "../pipeline/step.js";
+import { LOUDNESS, type Format } from "../constants.js";
+import { hashOf, VideoMillError } from "../pipeline/step.js";
 import type { PageCameraProps } from "../remotion/PageCamera.js";
 
 const ENTRY = resolve("src/remotion/index.ts");
@@ -77,6 +77,45 @@ export function concatClips(clips: string[], outPath: string): void {
     "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list,
     "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", outPath,
   ]);
+}
+
+/**
+ * Two-pass EBU R128 normalisation to LOUDNESS (ffmpeg loudnorm). Video is
+ * stream-copied. Returns integrated loudness before and after, in LUFS.
+ */
+export function normalizeLoudness(inPath: string, outPath: string): { before: number; after: number } {
+  const target = `I=${LOUDNESS.I}:TP=${LOUDNESS.TP}:LRA=${LOUDNESS.LRA}`;
+  const m = measure(inPath, `loudnorm=${target}:print_format=json`);
+  execFileSync("ffmpeg", [
+    "-y", "-loglevel", "error", "-i", inPath,
+    "-af", `loudnorm=${target}:measured_I=${m.input_i}:measured_TP=${m.input_tp}:measured_LRA=${m.input_lra}:measured_thresh=${m.input_thresh}:offset=${m.target_offset}:linear=true`,
+    "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-movflags", "+faststart", outPath,
+  ]);
+  return { before: parseFloat(m.input_i), after: measureLufs(outPath) };
+}
+
+/** Integrated loudness of a file's audio, in LUFS. */
+export function measureLufs(path: string): number {
+  return parseFloat(measure(path, `loudnorm=I=${LOUDNESS.I}:print_format=json`).input_i);
+}
+
+function measure(path: string, filter: string): Record<string, string> {
+  // loudnorm prints its JSON report on stderr after the run.
+  const r = spawnSync("ffmpeg", ["-hide_banner", "-nostats", "-i", path, "-af", filter, "-vn", "-f", "null", "-"], { encoding: "utf8" });
+  const json = r.stderr.slice(r.stderr.lastIndexOf("{"), r.stderr.lastIndexOf("}") + 1);
+  if (r.status !== 0 || !json) throw new VideoMillError(`loudness measure failed on ${path}: ${r.stderr.trim().split("\n").at(-1)}`);
+  return JSON.parse(json);
+}
+
+/** SubRip captions from cues in seconds. */
+export function writeSrt(cues: { start: number; end: number; text: string }[], outPath: string): void {
+  const ts = (s: number) => {
+    const ms = Math.round(s * 1000);
+    const p = (n: number, w = 2) => String(n).padStart(w, "0");
+    return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`;
+  };
+  mkdirSync(dirname(outPath), { recursive: true });
+  writeFileSync(outPath, cues.map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.text}\n`).join("\n"));
 }
 
 export function probeDurationSec(path: string): number {

@@ -2,7 +2,7 @@ import { Composition } from "remotion";
 import { FORMATS, FORMAT_IDS, FPS } from "../constants";
 import { PageCamera, type PageCameraProps } from "./PageCamera";
 
-const defaults: PageCameraProps = { image: "", imageWidth: 0, segments: [], audio: "", caption: "", durationInFrames: FPS * 5 };
+const defaults: PageCameraProps = { image: "", imageWidth: 0, segments: [], phrases: [], durationInFrames: FPS * 5 };
 
 export const Root: React.FC = () => (
   <>

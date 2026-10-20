@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.D built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.E built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.D: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.E–v1.J):
+Built through v1.E: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.F–v1.J):
 
 ```
 videomill/
@@ -33,15 +33,17 @@ videomill/
 
 ### Video pipeline
 
-`source (URL | markdown)` → **record** (Playwright footage + screenshots) → **draft** (Claude Code writes script + storyboard into `project.json`) → **approve** (operator gate; factual claims editable) → **synthesize** (TTS per caption segment) → **render** (Remotion, per scene × per format) → **assemble** (concat scenes per format) → **QA** (P1) → **export** (folder + `manifest.json`).
+`source (URL | markdown)` → **record** (Playwright footage + screenshots) → **draft** (Claude Code writes script + storyboard into `project.json`) → **approve** (operator gate; factual claims editable) → **synthesize** (TTS per phrase) → **render** (Remotion, per scene × per format) → **assemble** (concat scenes per format) → **QA** (P1) → **export** (folder + `manifest.json`).
 
 Rules:
 - Every step probes existing state first and is safe to re-run; prints `✓` / `↷` / `✗`.
 - Steps are keyed by content hash (`out/<slug>/stamps.json`). **Built in v1.C:**
   - `record <capture> <format>`: keyed by URL, anchors and capture settings.
-  - `tts <scene>`: keyed by narration + voice; the WAV is cached at `media/tts/<hash>.wav`.
+  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`.
   - `render <scene> <format>`: keyed by props, the capture stamp and `compositionHash()`.
-  - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat with video stream-copied and audio re-encoded.
+  - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat (video stream-copied, audio re-encoded) to `scenes/joined-<format>.mp4`.
+  - `loudness <format>` *(v1.E)*: two-pass `loudnorm` to −14 LUFS → `<slug>-<format>.mp4`; prints before → after.
+  - `captions <format>` *(v1.E)*: `<slug>-<format>.srt` from the phrase timings.
   - `contact sheet <format>`.
 - Editing one scene re-voices and re-renders only that scene, then re-assembles (verified 2026-10-20). `--scene <id> --force` forces one scene's TTS and render and leaves the rest cached.
 - Render and approve are separate: render refuses to run unless `project.json` is approved (v1.G).
@@ -53,7 +55,7 @@ Rules:
 - Viewport × `deviceScaleFactor` = output frame width (16x9: **1280 × 1.5** since v1.C; 9x16: 540 × 2, `isMobile`). So a full-page screenshot maps 1:1 onto video pixels and stays sharp. v1.B used 1920 × 1 for 16x9, which made desktop pages tiny and sparse; 1280 @1.5× reads about 1.5 times larger.
 - **Anchors (v1.C):** every scene `from`/`to` that isn't `"top"` is a Playwright selector. At record time each one is resolved to a device-pixel y offset per format and written to `media/<capture>-<format>.json`. A missing anchor fails the record step with `✗`. Framing per format therefore comes from the real layout: the same heading sits at y=1144 on desktop and y=2048 on mobile.
 - The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
-- The scene (`src/remotion/PageCamera.tsx`) moves a virtual camera over that PNG along segments planned from the scene's shots (next section). The caption sits clear of the Shorts UI on 9x16, with narration audio underneath.
+- The scene (`src/remotion/PageCamera.tsx`) moves a virtual camera over that PNG along segments planned from the scene's shots (next section). Phrase captions and narration play on top (§ Phrases and captions).
 - **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.I).
 
 ### Camera and shots (v1.D)
@@ -70,6 +72,16 @@ Rules:
 - **No shots** = v1.C behaviour, compiled as hold 0.4 s → pan to `to` (or `+screens`) → hold 0.6 s. So every scene renders through one code path.
 - **Rendering:** each frame interpolates the current segment with ease-in-out cubic. Zoom width interpolates in log space so its speed looks even. The image is resized (not CSS-scaled), so Chromium resamples from source pixels.
 - **Finding (2026-10-20):** on 9x16, typical mobile elements are already about 94% of the frame width (lamillrentals.com cards are 1016 of 1080 px). So `zoom` with `fill` ≤ 0.94 can't zoom in; it only recenters on the element. Zoom works as intended on 16x9 (Chairs card at the 2.5× cap). A per-shot minimum scale, if wanted, would be an additive field.
+
+### Phrases and captions (v1.E)
+
+`src/render/timeline.ts`, pure and unit-tested in `timeline.test.ts`:
+- `phrasesOf(scene)`: one phrase per shot with `say`/`caption`, in order; a scene without them is one phrase (scene `narration` + `caption`) spanning the whole scene.
+- `timeScene(scene, audioSec[], fps)`: each phrase's shot lasts max(`seconds`, audio + `PHRASE_GAP` 0.25 s). A pan/zoom whose own `seconds` is shorter moves, then gets an appended hold. Returns the scene with every shot timed (input to `planCamera`), phrase windows in frames, and the scene length (≥ `minSeconds`).
+- `PageCamera.tsx` renders each phrase as a `<Sequence>` holding its `<Audio>` and caption, so a caption shows only while its phrase plays.
+- **Safe zone:** `SAFE_ZONE` per format in `constants.ts`. 9x16 = Google's YouTube vertical-video zone (288 top / 192 right / 672 bottom / 48 left, source in the constant's comment); 16x9 = none. The caption box is laid out inside the zone.
+- **Loudness:** `normalizeLoudness()` in `render.ts`, two-pass ffmpeg `loudnorm` against `LOUDNESS` (I −14, TP −1.5, LRA 11).
+- **SRT:** `writeSrt()`; cue times are scene offset + phrase window.
 
 ### Extension popup recording (v1.I — riskiest piece, benchmark test)
 
@@ -100,17 +112,17 @@ Scene (`kind: "page-scroll"`, the only kind in v1.C):
 | Field | Meaning |
 |---|---|
 | `id` | unique within the project; names the clip |
-| `shots?` | *(added v1.D)* ordered `hold` / `pan` / `zoom` / `cut` (see § 2 Camera and shots). When set, `to` is rejected and `screens` is ignored |
+| `shots?` | *(added v1.D)* ordered `hold` / `pan` / `zoom` / `cut` (see § 2 Camera and shots). When set, `to` is rejected and `screens` is ignored. *(v1.E)* `hold`/`pan`/`zoom` take optional `say` (spoken phrase) and `caption` (default `say`); with `say`, `seconds` is optional |
 | `capture` | a `captures[].id` |
 | `from` | `"top"` or a Playwright selector (default `"top"`) |
 | `to?` | selector or `"top"`; if absent the pan runs `screens` × frame height from `from` (no-shots scenes only) |
 | `screens` | 0–4, default 1 |
-| `narration` | spoken text (one TTS segment until v1.E splits it into phrases) |
-| `caption` | burned-in text |
-| `minSeconds` | default 3; scene length = max(minSeconds, narration + 0.6 s) |
+| `narration` | whole-scene spoken text; must be empty when shots carry `say` |
+| `caption` | whole-scene burned-in text; must be empty when shots carry `say`/`caption` |
+| `minSeconds` | default 3; scene length = max(minSeconds, narration + 0.6 s, shots), or with phrases max(minSeconds, timed shots) |
 | `framing?` | per-format `{ from?, to? }` overrides |
 
-Change from the v1.A projection: `voice` and `captures` were added at the top level (additive). A scene's `narration` is a single string, not an array; v1.E decides segmenting.
+Change from the v1.A projection: `voice` and `captures` were added at the top level (additive). A scene's `narration` is a single string, not an array; v1.E segments via shot `say` instead.
 
 ### `exports/<slug>/<UTC-ts>/manifest.json` — `videomill-export-v1` (locked; ADR-0005)
 
@@ -150,7 +162,7 @@ Colors, logo path, fonts, TTS voice id, caption style, and a **CTA end-card temp
 
 | Module | Purpose |
 |---|---|
-| `src/constants.ts` | Canonical enums: `FORMATS`, `VIDEO_TYPES`, `CHANNELS`, `FPS`, per-format `CAPTURE` settings |
+| `src/constants.ts` | Canonical enums: `FORMATS`, `VIDEO_TYPES`, `CHANNELS`, `FPS`, per-format `CAPTURE` settings, `SAFE_ZONE`, `LOUDNESS` |
 | `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
 | `src/project/schema.ts` | zod schema for `project.json`, `scenesHash()`, `anchorsFor()` |
 | `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
@@ -159,7 +171,8 @@ Colors, logo path, fonts, TTS voice id, caption style, and a **CTA end-card temp
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
 | `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` |
 | `src/render/camera.ts` | `planCamera()` shots → segments; `shotsSeconds()`; tests in `camera.test.ts` |
-| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); `concatClips()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
+| `src/render/timeline.ts` | `phrasesOf()`, `timeScene()`: phrase audio lengths → timed shots + phrase windows; tests in `timeline.test.ts` |
+| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); `concatClips()`; `normalizeLoudness()` / `measureLufs()`; `writeSrt()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
 | `src/cli/index.ts` | arg parsing + dispatch |
 | `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
 | `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
@@ -208,17 +221,17 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.D shipped (see `shipping-history.md`). Next: v1.E, phrase captions mapped to shots, SRT, 9:16 safe zone, −14 LUFS (plan in `prd.md § 5` design notes).
+v1.E shipped (see `shipping-history.md`). Next: v1.F, brand profiles + CTA end-card (plan in `prd.md § 5` design notes).
 
 ## 9. Risks
 
 - **Extension popup capture** (§ 2, v1.I) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
-- **Kokoro on CPU** — synthesis speed and voice quality vs. the Fiverr benchmark unknown until v1.E. Mitigation: provider interface (ADR-0004).
+- **Kokoro on CPU** — measured in v1.E at roughly real time per phrase in the container (1.8 s audio in 2.0 s; 2.4 s in 1.4 s). Voice quality vs. the Fiverr benchmark is still unjudged. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).
 - **Image size** — Playwright Chromium + Remotion Chrome Headless Shell + ffmpeg.
 - **Shared dev container** — builder's `dev_container.sh` defaults to container `mb1`; `Makefile.local` sets `CONTAINER_NAME=videomill`, `DOCKER_CMD=docker`, and host port 3333 → 3000.
 - **Root-owned files on the host** — the container runs as root, so `node_modules/`, `.cache/`, `out/`, `projects/*/media/` and `pnpm-lock.yaml` are root-owned on the host. The host user can't delete or edit them without sudo. See § 10.
-- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalization to −14 LUFS (ffmpeg `loudnorm`) is v1.E; the `qa` loudness check is v1.H.
+- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalized to −14 LUFS since v1.E (lamillrentals-promo measured −22.8 before); the `qa` loudness check is v1.H.
 - **Disk** — `node_modules` is 1.6 GB, `.cache` 681 MB, plus the 1.65 GB image. The host had about 26 GB free.
 - **Recordings are gitignored** — a project whose source can't be re-recorded (e.g. the Fiverr reference footage) can't be rebuilt from git alone. Revisit if it bites.
 - **Remotion license** — free tier ends above 3 employees.

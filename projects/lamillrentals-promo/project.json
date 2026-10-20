@@ -27,17 +27,18 @@
       "capture": "page",
       "from": "top",
       "screens": 1,
-      "narration": "Party and event rentals in Salinas and Monterey.",
-      "caption": "Party & event rentals in Salinas & Monterey",
+      "narration": "",
+      "caption": "",
       "minSeconds": 3,
       "shots": [
         {
           "kind": "hold",
-          "seconds": 1.2
+          "say": "Party and event rentals in Salinas and Monterey.",
+          "caption": "Party & event rentals in Salinas & Monterey"
         },
         {
           "kind": "pan",
-          "seconds": 2.0,
+          "seconds": 1.5,
           "to": "h2:has-text(\"Rental Categories\")"
         }
       ]
@@ -48,23 +49,22 @@
       "capture": "page",
       "from": "h2:has-text(\"Rental Categories\")",
       "screens": 0.5,
-      "narration": "Chairs, tables, tents, and lighting, delivered across Monterey County.",
-      "caption": "Chairs, tables, tents & lighting",
+      "narration": "",
+      "caption": "",
       "minSeconds": 3,
       "shots": [
         {
           "kind": "hold",
-          "seconds": 0.6
+          "say": "Chairs, tables, tents, and lighting,",
+          "caption": "Chairs, tables, tents & lighting"
         },
         {
           "kind": "zoom",
           "seconds": 1.5,
           "target": ".shadow-md:has(h3:has-text(\"Chairs\"))",
-          "fill": 0.85
-        },
-        {
-          "kind": "hold",
-          "seconds": 1.5
+          "fill": 0.85,
+          "say": "delivered across Monterey County.",
+          "caption": "Delivered across Monterey County"
         }
       ]
     },
@@ -74,23 +74,16 @@
       "capture": "page",
       "from": "h2:has-text(\"Featured Rental Items\")",
       "screens": 0.5,
-      "narration": "No minimum order. Get a quote at lamillrentals.com.",
-      "caption": "No minimum order · Get a quote",
+      "narration": "",
+      "caption": "",
       "minSeconds": 3,
       "shots": [
-        {
-          "kind": "hold",
-          "seconds": 0.5
-        },
         {
           "kind": "zoom",
           "seconds": 1.3,
           "target": ".shadow-md:has(h3:has-text(\"Folding Chair - White\"))",
-          "fill": 0.85
-        },
-        {
-          "kind": "hold",
-          "seconds": 0.8
+          "fill": 0.85,
+          "say": "No minimum order."
         },
         {
           "kind": "cut",
@@ -98,7 +91,8 @@
         },
         {
           "kind": "hold",
-          "seconds": 1.0
+          "say": "Get a quote at lamillrentals.com.",
+          "caption": "Get a quote · lamillrentals.com"
         }
       ]
     }

@@ -19,13 +19,26 @@ export const Capture = z.object({
 
 // Shot primitives (v1.D). A scene's camera starts at `from`; each shot moves it.
 // hold/pan/zoom take time; cut is instant. `at` on hold also cuts first.
+// v1.E: a timed shot may carry one narration phrase (`say`) — the shot lasts at
+// least as long as the phrase audio — and an on-screen `caption` (default: `say`).
+// With `say`, `seconds` is optional: pan/zoom then move over the whole phrase.
+const spoken = {
+  seconds: z.number().positive().optional(),
+  say: z.string().min(1).optional(),
+  caption: z.string().min(1).optional(),
+};
+const timed = (s: { seconds?: number; say?: string }) => s.seconds !== undefined || s.say !== undefined;
+const timedMsg = { message: "needs `seconds` (or `say`, which times the shot from its audio)", path: ["seconds"] };
 export const Shot = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("hold"), seconds: z.number().positive(), at: anchor.optional() }).strict(),
+  z.object({ kind: z.literal("hold"), ...spoken, at: anchor.optional() }).strict().refine(timed, timedMsg),
   // pan `to` is an anchor, or "+N" = N frame-heights down from the current view
-  z.object({ kind: z.literal("pan"), seconds: z.number().positive(), to: anchor }).strict(),
-  z.object({ kind: z.literal("zoom"), seconds: z.number().positive(), target: anchor, fill: z.number().min(0.2).max(1).default(0.85) }).strict(),
+  z.object({ kind: z.literal("pan"), ...spoken, to: anchor }).strict().refine(timed, timedMsg),
+  z.object({ kind: z.literal("zoom"), ...spoken, target: anchor, fill: z.number().min(0.2).max(1).default(0.85) }).strict().refine(timed, timedMsg),
   z.object({ kind: z.literal("cut"), to: anchor }).strict(),
 ]);
+
+/** True when the scene's narration/captions live on its shots (v1.E). */
+export const phrased = (s: { shots?: Shot[] }) => (s.shots ?? []).some((sh) => sh.kind !== "cut" && (sh.say || sh.caption));
 
 export const Scene = z.object({
   id,
@@ -34,12 +47,17 @@ export const Scene = z.object({
   from: anchor.default("top"),
   to: anchor.optional(), // else pan `screens` screen-heights from `from`
   screens: z.number().min(0).max(4).default(1),
+  // Whole-scene narration + caption. Leave both empty when shots carry `say`/`caption`.
   narration: z.string(),
   caption: z.string(),
   minSeconds: z.number().positive().default(3),
   framing: z.partialRecord(z.enum(FORMAT_IDS), framing).optional(),
   shots: z.array(Shot).min(1).optional(),
-}).strict().refine((s) => !(s.shots && s.to), { message: "`to` is ignored when `shots` is set — use a pan/cut shot", path: ["to"] });
+}).strict()
+  .refine((s) => !(s.shots && s.to), { message: "`to` is ignored when `shots` is set — use a pan/cut shot", path: ["to"] })
+  .refine((s) => !(phrased(s) && (s.narration.trim() || s.caption.trim())), {
+    message: "shots carry `say`/`caption` — leave scene `narration` and `caption` empty", path: ["narration"],
+  });
 
 export const Project = z.object({
   schema: z.literal(PROJECT_SCHEMA),

@@ -35,3 +35,5 @@
 > Accept renumbering and per-phrase Kokoro timing. Order: v1.D = shot primitives (explicit hold with duration, zoom-to-element, cut within scene; recorder stores full anchor bounding boxes). v1.E = TTS + phrase captions + safe zone + −14 LUFS, where each phrase maps to a shot. Shift the rest down. Then commit and start v1.D.
 
 > commit v1.D and start v1.E
+
+> commit v1.E and start v1.F

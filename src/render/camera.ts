@@ -56,6 +56,7 @@ export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationS
     if (sh.kind === "cut") { cur = at(sh.to); continue; }
     if (sh.kind === "hold" && sh.at) cur = at(sh.at);
     const target = sh.kind === "hold" ? cur : sh.kind === "pan" ? (sh.to.startsWith("+") ? clamp({ ...cur, y: cur.y + Number(sh.to.slice(1)) * frame.height }) : at(sh.to)) : zoomTo(sh.target, sh.fill);
+    if (sh.seconds === undefined) throw new VideoMillError(`scene ${scene.id}: shot not timed — run timeScene() first`);
     const n = Math.max(1, Math.round(sh.seconds * fps));
     segs.push({ start: t, end: t + n, from: cur, to: target });
     cur = target;
@@ -69,7 +70,7 @@ export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationS
 }
 
 /** Shot length in seconds (cuts are instant). */
-export const shotsSeconds = (shots: Shot[]) => shots.reduce((s, sh) => s + (sh.kind === "cut" ? 0 : sh.seconds), 0);
+export const shotsSeconds = (shots: Shot[]) => shots.reduce((s, sh) => s + (sh.kind === "cut" ? 0 : sh.seconds ?? 0), 0);
 
 /** v1.C behaviour as shots: short hold, pan to `to` (or `screens` down), short hold. */
 function legacyShots(scene: Scene, f: Format, durationSec: number): Shot[] {
