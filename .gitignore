@@ -1,0 +1,39 @@
+# Session-bridging state — never commit
+docs/handoff.md
+
+# Secrets
+.env
+*.env
+
+# Node / Remotion
+node_modules/
+.pnpm-store/
+out/
+.remotion/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+build/
+*.egg-info/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Render / recording artifacts (large binaries)
+renders/
+recordings/
+*.mp4
+*.webm
+*.wav
+*.mp3
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
