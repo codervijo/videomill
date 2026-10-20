@@ -12,6 +12,17 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.D — Shot primitives: hold, zoom to element, cut (shipped 2026-10-20)
+
+- `scenes[].shots[]` (additive to `videomill-project-v1`): `hold {seconds, at?}`, `pan {seconds, to}` (`to` = anchor or `"+N"` frame-heights), `zoom {seconds, target, fill=0.85}`, `cut {to}`. `to` together with `shots` is a schema error.
+- **One camera path.** `planCamera()` compiles shots into keyframed view segments. Scenes without shots compile to the v1.C hold → pan → hold, so old projects render the same way. `PageCamera.tsx` replaces `SiteScroll.tsx`.
+- **The recorder stores full anchor boxes** (`CaptureMeta` version 2). The record cache key gained `meta: 2`, so existing captures re-recorded automatically. Render refuses a version-1 capture with a `✗` naming the fix.
+- **Zoom capped at 2.5×** because screenshots are 1:1 output pixels. Zoom interpolates in log space, and the image is resized rather than CSS-scaled for sharper resampling.
+- Unit tests (6) for `planCamera` via Node's test runner + tsx: no new dependency.
+- lamillrentals-promo now uses all four primitives: hold → pan (hero), zoom to the Chairs card (categories), zoom to Folding Chair → cut to Chiavari (featured). All five selector anchors resolved in both formats.
+- **Finding:** on 9x16, zoom with `fill` 0.85 is a recentre, not a zoom, for elements already about 94% of frame width (mobile cards). Recorded in `architecture.md § 2`; a per-shot minimum scale would be additive if wanted.
+- Seen for v1.E/v1.H: the bottom caption covers card content in zoomed and cut frames (safe zone + `qa` caption-overlap check).
+
 ## v1.C — Project file: scenes as data, single-scene re-render (shipped 2026-10-20)
 
 - `projects/<slug>/project.json` (`videomill-project-v1`) validated by a strict zod schema with typed, path-level errors. `new` scaffolds one; `render` refuses empty narration or captions.

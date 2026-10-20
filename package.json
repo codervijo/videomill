@@ -6,7 +6,7 @@
   "scripts": {
     "videomill": "tsx src/cli/index.ts",
     "studio": "remotion studio src/remotion/index.ts",
-    "test": "tsc --noEmit"
+    "test": "tsc --noEmit && tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@remotion/bundler": "4.0.537",

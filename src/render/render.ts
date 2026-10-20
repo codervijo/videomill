@@ -6,7 +6,7 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import type { Format } from "../constants.js";
 import { hashOf } from "../pipeline/step.js";
-import type { SiteScrollProps } from "../remotion/SiteScroll.js";
+import type { PageCameraProps } from "../remotion/PageCamera.js";
 
 const ENTRY = resolve("src/remotion/index.ts");
 const REMOTION_DIR = resolve("src/remotion");
@@ -28,13 +28,13 @@ async function serveUrlFor(publicDir: string): Promise<string> {
 
 export async function renderScene(
   format: Format,
-  props: SiteScrollProps,
+  props: PageCameraProps,
   publicDir: string,
   outPath: string,
   onProgress?: (pct: number) => void,
 ): Promise<void> {
   const serveUrl = await serveUrlFor(publicDir);
-  const id = `SiteScroll-${format}`;
+  const id = `PageCamera-${format}`;
   const composition = await selectComposition({ serveUrl, id, inputProps: props });
   mkdirSync(dirname(outPath), { recursive: true });
   let last = -1;

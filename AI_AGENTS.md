@@ -20,7 +20,7 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | v1.A | ✅ | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
 | v1.B | ✅ | Container + POC on lamillrentals.com — 10 s scene, both formats, contact sheet |
 | v1.C | ✅ | Project file — scenes as data, single-scene re-render |
-| v1.D | ⏳ | Shot primitives — hold, zoom to element, cut |
+| v1.D | ✅ | Shot primitives — hold, zoom to element, cut |
 | v1.E | ⏳ | Phrase captions (phrase → shot) + SRT + 9:16 safe zone + −14 LUFS |
 | v1.F | ⏳ | Brand profiles + CTA end-card per brand |
 | v1.G | ⏳ | Script/storyboard approval gate |
@@ -73,7 +73,7 @@ Host (Docker + make only):
 ```bash
 make up                                        # build image if needed, start `videomill` container, copy builder in
 make x T=deps                                  # pnpm install + Playwright Chromium + Remotion headless shell
-make x T=test                                  # tsc --noEmit
+make x T=test                                  # tsc --noEmit + unit tests
 make x T=run ARGS="render lamillrentals-promo" # run the CLI in the container
 make sh                                        # interactive shell (or: make buildsh)
 make down                                      # stop the container

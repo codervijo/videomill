@@ -17,6 +17,16 @@ export const Capture = z.object({
   url: z.string().url(),
 }).strict();
 
+// Shot primitives (v1.D). A scene's camera starts at `from`; each shot moves it.
+// hold/pan/zoom take time; cut is instant. `at` on hold also cuts first.
+export const Shot = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("hold"), seconds: z.number().positive(), at: anchor.optional() }).strict(),
+  // pan `to` is an anchor, or "+N" = N frame-heights down from the current view
+  z.object({ kind: z.literal("pan"), seconds: z.number().positive(), to: anchor }).strict(),
+  z.object({ kind: z.literal("zoom"), seconds: z.number().positive(), target: anchor, fill: z.number().min(0.2).max(1).default(0.85) }).strict(),
+  z.object({ kind: z.literal("cut"), to: anchor }).strict(),
+]);
+
 export const Scene = z.object({
   id,
   kind: z.literal("page-scroll"),
@@ -28,7 +38,8 @@ export const Scene = z.object({
   caption: z.string(),
   minSeconds: z.number().positive().default(3),
   framing: z.partialRecord(z.enum(FORMAT_IDS), framing).optional(),
-}).strict();
+  shots: z.array(Shot).min(1).optional(),
+}).strict().refine((s) => !(s.shots && s.to), { message: "`to` is ignored when `shots` is set — use a pan/cut shot", path: ["to"] });
 
 export const Project = z.object({
   schema: z.literal(PROJECT_SCHEMA),
@@ -68,6 +79,7 @@ export const Project = z.object({
 export type Project = z.infer<typeof Project>;
 export type Scene = z.infer<typeof Scene>;
 export type Capture = z.infer<typeof Capture>;
+export type Shot = z.infer<typeof Shot>;
 
 /** Hash of the scene content, used for approval (v1.G). */
 export function scenesHash(p: Project): string {
@@ -78,8 +90,9 @@ export function scenesHash(p: Project): string {
 export function anchorsFor(p: Project, captureId: string): string[] {
   const set = new Set<string>();
   for (const s of p.scenes.filter((s) => s.capture === captureId)) {
-    for (const a of [s.from, s.to, ...Object.values(s.framing ?? {}).flatMap((f) => [f?.from, f?.to])]) {
-      if (a && a !== "top") set.add(a);
+    const shotAnchors = (s.shots ?? []).map((sh) => (sh.kind === "zoom" ? sh.target : sh.kind === "hold" ? sh.at : sh.to));
+    for (const a of [s.from, s.to, ...shotAnchors, ...Object.values(s.framing ?? {}).flatMap((f) => [f?.from, f?.to])]) {
+      if (a && a !== "top" && !a.startsWith("+")) set.add(a);
     }
   }
   return [...set].sort();

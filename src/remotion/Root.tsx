@@ -1,16 +1,16 @@
 import { Composition } from "remotion";
 import { FORMATS, FORMAT_IDS, FPS } from "../constants";
-import { SiteScroll, type SiteScrollProps } from "./SiteScroll";
+import { PageCamera, type PageCameraProps } from "./PageCamera";
 
-const defaults: SiteScrollProps = { image: "", fromY: 0, toY: 0, audio: "", caption: "", durationInFrames: FPS * 5 };
+const defaults: PageCameraProps = { image: "", imageWidth: 0, segments: [], audio: "", caption: "", durationInFrames: FPS * 5 };
 
 export const Root: React.FC = () => (
   <>
     {FORMAT_IDS.map((f) => (
       <Composition
         key={f}
-        id={`SiteScroll-${f}`}
-        component={SiteScroll}
+        id={`PageCamera-${f}`}
+        component={PageCamera}
         width={FORMATS[f].width}
         height={FORMATS[f].height}
         fps={FPS}

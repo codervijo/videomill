@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.C built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.D built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.C: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.D–v1.J):
+Built through v1.D: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`. The rest is projected (v1.E–v1.J):
 
 ```
 videomill/
@@ -53,8 +53,23 @@ Rules:
 - Viewport × `deviceScaleFactor` = output frame width (16x9: **1280 × 1.5** since v1.C; 9x16: 540 × 2, `isMobile`). So a full-page screenshot maps 1:1 onto video pixels and stays sharp. v1.B used 1920 × 1 for 16x9, which made desktop pages tiny and sparse; 1280 @1.5× reads about 1.5 times larger.
 - **Anchors (v1.C):** every scene `from`/`to` that isn't `"top"` is a Playwright selector. At record time each one is resolved to a device-pixel y offset per format and written to `media/<capture>-<format>.json`. A missing anchor fails the record step with `✗`. Framing per format therefore comes from the real layout: the same heading sits at y=1144 on desktop and y=2048 on mobile.
 - The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
-- The scene (`src/remotion/SiteScroll.tsx`) pans that PNG from `fromY` to `toY` (short hold, eased pan, short hold). The caption sits clear of the Shorts UI on 9x16, with narration audio underneath. Pan range = anchor − 4% of frame height, clamped to the image. When there's no `to`, the pan runs `from` + `screens` × frame height.
+- The scene (`src/remotion/PageCamera.tsx`) moves a virtual camera over that PNG along segments planned from the scene's shots (next section). The caption sits clear of the Shorts UI on 9x16, with narration audio underneath.
 - **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.I).
+
+### Camera and shots (v1.D)
+
+`src/render/camera.ts` `planCamera(scene, format, meta, seconds, fps)` → `Segment[]`. It's a pure function, unit-tested in `camera.test.ts`.
+- **View** = the visible window into the screenshot `{x, y, w}` in image pixels; height follows the frame aspect. Views are clamped inside the image, and zoom is capped at `MAX_ZOOM` = 2.5× because the screenshot is captured at 1:1 output pixels and gets soft beyond that.
+- **Anchor view** = full width, with the anchor box 4% of frame height below the top edge. **Zoom view** = the smallest window that fits the anchor box at `fill` in both dimensions, centered on it, then clamped.
+- **Shots** run in order from the scene's `from` view:
+  - `hold {seconds, at?}`: static; `at` cuts there first.
+  - `pan {seconds, to}`: `to` is an anchor or `"+N"` frame-heights down.
+  - `zoom {seconds, target, fill=0.85}`
+  - `cut {to}`: instant.
+- If narration runs longer than the shots, the last framing holds to the end.
+- **No shots** = v1.C behaviour, compiled as hold 0.4 s → pan to `to` (or `+screens`) → hold 0.6 s. So every scene renders through one code path.
+- **Rendering:** each frame interpolates the current segment with ease-in-out cubic. Zoom width interpolates in log space so its speed looks even. The image is resized (not CSS-scaled), so Chromium resamples from source pixels.
+- **Finding (2026-10-20):** on 9x16, typical mobile elements are already about 94% of the frame width (lamillrentals.com cards are 1016 of 1080 px). So `zoom` with `fill` ≤ 0.94 can't zoom in; it only recenters on the element. Zoom works as intended on 16x9 (Chairs card at the 2.5× cap). A per-shot minimum scale, if wanted, would be an additive field.
 
 ### Extension popup recording (v1.I — riskiest piece, benchmark test)
 
@@ -85,9 +100,10 @@ Scene (`kind: "page-scroll"`, the only kind in v1.C):
 | Field | Meaning |
 |---|---|
 | `id` | unique within the project; names the clip |
+| `shots?` | *(added v1.D)* ordered `hold` / `pan` / `zoom` / `cut` (see § 2 Camera and shots). When set, `to` is rejected and `screens` is ignored |
 | `capture` | a `captures[].id` |
 | `from` | `"top"` or a Playwright selector (default `"top"`) |
-| `to?` | selector or `"top"`; if absent the pan runs `screens` × frame height from `from` |
+| `to?` | selector or `"top"`; if absent the pan runs `screens` × frame height from `from` (no-shots scenes only) |
 | `screens` | 0–4, default 1 |
 | `narration` | spoken text (one TTS segment until v1.E splits it into phrases) |
 | `caption` | burned-in text |
@@ -138,10 +154,11 @@ Colors, logo path, fonts, TTS voice id, caption style, and a **CTA end-card temp
 | `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
 | `src/project/schema.ts` | zod schema for `project.json`, `scenesHash()`, `anchorsFor()` |
 | `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
-| `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor offsets JSON |
+| `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** JSON (`CaptureMeta` version 2: `{x,y,w,h}` per selector, device px) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
-| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`SiteScroll-16x9` / `SiteScroll-9x16`, duration from props), `SiteScroll.tsx` |
+| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` |
+| `src/render/camera.ts` | `planCamera()` shots → segments; `shotsSeconds()`; tests in `camera.test.ts` |
 | `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); `concatClips()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
 | `src/cli/index.ts` | arg parsing + dispatch |
 | `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
@@ -186,11 +203,12 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 - Playwright 1.64.1. Chromium is installed by `make deps` into `.cache/ms-playwright` (`PLAYWRIGHT_BROWSERS_PATH`), so its version follows the lockfile.
 - kokoro-js 1.2.1 (onnxruntime-node 1.21).
 - Output: H.264 + AAC 48 kHz, 30 fps.
+- Tests: `make x T=test` = `tsc --noEmit` + Node's built-in test runner via `tsx --test` (no test framework dependency).
 - Remotion license: free for an individual or a for-profit org with up to 3 employees; a company license is required beyond that.
 
 ## 8. Active implementation plans
 
-v1.C shipped (see `shipping-history.md`). Next: v1.D, shot primitives (hold, zoom to element, cut) (plan in `prd.md § 5` design notes).
+v1.D shipped (see `shipping-history.md`). Next: v1.E, phrase captions mapped to shots, SRT, 9:16 safe zone, −14 LUFS (plan in `prd.md § 5` design notes).
 
 ## 9. Risks
 

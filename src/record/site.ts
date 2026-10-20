@@ -1,12 +1,14 @@
 // Capture a live page with Playwright: a full-page screenshot per format plus
-// the device-pixel y offset of every anchor the project's scenes reference.
+// the device-pixel bounding box of every anchor the project's scenes reference.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium } from "playwright";
 import { CAPTURE, type Format } from "../constants.js";
 import { info, VideoMillError } from "../pipeline/step.js";
 
-export type CaptureMeta = { width: number; height: number; anchors: Record<string, number> };
+export type Box = { x: number; y: number; w: number; h: number };
+// Anchor boxes in device pixels of the full-page screenshot (v1.D: full box, was y only).
+export type CaptureMeta = { version: 2; width: number; height: number; anchors: Record<string, Box> };
 
 export const captureFiles = (mediaDir: string, captureId: string, f: Format) => ({
   png: join(mediaDir, `${captureId}-${f}.png`),
@@ -33,11 +35,12 @@ export async function recordCapture(url: string, format: Format, anchors: string
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(500);
 
-    const meta: CaptureMeta = { width: viewport.width * scale, height: 0, anchors: {} };
+    const meta: CaptureMeta = { version: 2, width: viewport.width * scale, height: 0, anchors: {} };
     for (const sel of anchors) {
       const box = await page.locator(sel).first().boundingBox({ timeout: 5000 }).catch(() => null);
       if (!box) throw new VideoMillError(`anchor not found on ${url} @${format}: ${sel}`);
-      meta.anchors[sel] = Math.round(box.y * scale); // page is at scrollY 0
+      // page is at scrollY 0, so viewport coords == page coords
+      meta.anchors[sel] = { x: Math.round(box.x * scale), y: Math.round(box.y * scale), w: Math.round(box.width * scale), h: Math.round(box.height * scale) };
     }
 
     await page.screenshot({ path: files.png, fullPage: true });
