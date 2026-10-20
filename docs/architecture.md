@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: **projected** (locked in v1.A, 2026-10-20). Nothing below is built yet; each section is firmed up by the phase noted.
+Status: v1.B built (2026-10-20). Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Projected (lands across v1.B–v1.H):
+Built in v1.B: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,record,tts,remotion,render}`, `src/constants.ts`, `projects/<slug>/poc.json`, `out/`. The rest is projected (v1.C–v1.I):
 
 ```
 videomill/
@@ -40,6 +40,14 @@ Rules:
 - Steps are keyed by content hash (scene data + brand + voice), so changing one scene invalidates only that scene's TTS segments and scene render. This is how single-scene re-render (P0) works: render scene clips individually, then concat.
 - Render and approve are separate: render refuses to run unless `project.json` is approved (v1.F).
 - Claude drafting happens in the operator's Claude Code session editing `project.json`; the CLI makes no LLM calls in v1.
+
+### Site recording (v1.B)
+
+`src/record/site.ts`, one Chromium context per format:
+- Viewport × `deviceScaleFactor` = output frame width (16x9: 1920 × 1; 9x16: 540 × 2, `isMobile`). So a full-page screenshot maps 1:1 onto video pixels and stays sharp.
+- The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
+- The scene (`src/remotion/SiteScroll.tsx`) pans down that PNG: 1 s hold, eased travel of up to 2 screens, 1 s hold. The caption sits clear of the Shorts UI on 9x16, with narration audio underneath.
+- **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.H).
 
 ### Extension popup recording (v1.H — riskiest piece, benchmark test)
 
@@ -97,9 +105,20 @@ Colors, logo path, fonts, TTS voice id, caption style. Shared `lamill` brand plu
 
 ## 4. Modules
 
-(Filled per phase as modules land.)
+| Module | Purpose |
+|---|---|
+| `src/constants.ts` | Canonical enums: `FORMATS`, `VIDEO_TYPES`, `CHANNELS`, `FPS`, per-format `CAPTURE` settings |
+| `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
+| `src/record/site.ts` | Playwright capture of a live page (scroll video + full-page PNG) per format |
+| `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
+| `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
+| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`SiteScroll-16x9` / `SiteScroll-9x16`, duration from props), `SiteScroll.tsx` |
+| `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderMedia` (h264, concurrency 4); ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
+| `src/cli/index.ts` | `videomill render <slug> [--force]` |
 
 ## 5. CLI / UX surface
+
+**Built (v1.B):** `videomill render <slug> [--force]`. It reads `projects/<slug>/poc.json` (a temporary format, replaced by `project.json` in v1.C) and runs record → tts → render → contact sheet per format, writing to `out/<slug>/`. From the host: `make up` once, then `make x T=run ARGS="render <slug>"`.
 
 Projected command tree (names firmed per phase; no aliases):
 
@@ -121,22 +140,17 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 ## 7. Stack baselines
 
 - Linux x86_64, Docker. Host needs Docker + make only (ADR-0003).
-- Node 22 (Remotion's Docker baseline), pnpm, TypeScript strict (ADR-0002).
-- Remotion 4.x; its own Chrome Headless Shell (`npx remotion browser ensure`) baked into the image.
-- Playwright npm version pinned to match the base image tag.
-- ffmpeg from Debian packages in the image.
+- Image `builder/Dockerfile.video`: `node:22-bookworm` + ffmpeg, Xvfb, fonts (Liberation, Noto), Playwright's Chromium system deps, pnpm 9. About 1.65 GB.
+- Node 22, pnpm 9.15.9 (`packageManager`), TypeScript strict (ADR-0002); TS runs via `tsx`.
+- Remotion **4.0.537, pinned exactly** across `remotion` / `@remotion/*`, which must stay in lockstep. Chrome Headless Shell is installed by `make deps` into `node_modules/.remotion/`.
+- Playwright 1.64.1. Chromium is installed by `make deps` into `.cache/ms-playwright` (`PLAYWRIGHT_BROWSERS_PATH`), so its version follows the lockfile.
+- kokoro-js 1.2.1 (onnxruntime-node 1.21).
+- Output: H.264 + AAC 48 kHz, 30 fps.
 - Remotion license: free for an individual or a for-profit org with up to 3 employees; a company license is required beyond that.
 
 ## 8. Active implementation plans
 
-### v1.B — container + proof of concept on lamillrentals.com
-
-1. Builder: add `Makefile.video` + `Dockerfile.video`; auto-detect `remotion` in `package.json` before the `playwright` rule. (Separate commit in the builder repo.)
-2. VideoMill: `Makefile` builder include, `Makefile.local` with `CONTAINER_NAME=videomill`, minimal `package.json`.
-3. Record https://lamillrentals.com with Playwright in the container: a smooth scroll capture of the homepage (video) + full-page screenshot, at both a desktop and a mobile viewport.
-4. One 10-second Remotion scene from that footage with a caption and one Kokoro TTS line.
-5. Render 16:9 and 9:16; generate a contact sheet (ffmpeg tile).
-6. Report what worked, what failed, and any plan change → update this doc + PRD.
+v1.B shipped (see `shipping-history.md`). Next: v1.C, `project.json` with scenes as data (plan in `prd.md § 5` design notes).
 
 ## 9. Risks
 
@@ -144,7 +158,10 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 - **Kokoro on CPU** — synthesis speed and voice quality vs. the Fiverr benchmark unknown until v1.D. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).
 - **Image size** — Playwright Chromium + Remotion Chrome Headless Shell + ffmpeg.
-- **Shared dev container** — builder's `dev_container.sh` defaults to container `mb1`; must override `CONTAINER_NAME`.
+- **Shared dev container** — builder's `dev_container.sh` defaults to container `mb1`; `Makefile.local` sets `CONTAINER_NAME=videomill`, `DOCKER_CMD=docker`, and host port 3333 → 3000.
+- **Root-owned files on the host** — the container runs as root, so `node_modules/`, `.cache/`, `out/`, `projects/*/media/` and `pnpm-lock.yaml` are root-owned on the host. The host user can't delete or edit them without sudo. See § 10.
+- **Narration loudness** — the v1.B render measured mean −26.5 dB and peak −8.9 dB (ffmpeg volumedetect), likely quiet for social platforms. Normalization (ffmpeg `loudnorm`) belongs in v1.D, and checking it in P1 QA.
+- **Disk** — `node_modules` is 1.6 GB, `.cache` 681 MB, plus the 1.65 GB image. The host had about 26 GB free.
 - **Recordings are gitignored** — a project whose source can't be re-recorded (e.g. the Fiverr reference footage) can't be rebuilt from git alone. Revisit if it bites.
 - **Remotion license** — free tier ends above 3 employees.
 
@@ -152,4 +169,5 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 Work known to be queued at the architectural level. Each entry: **trigger** (what would make this worth doing now), **risk** (what could go wrong), **cost** (rough effort).
 
-(None yet.)
+- **Container user = host user.** Run the dev container with the host UID/GID so bind-mounted files aren't root-owned. **Trigger:** the first time root ownership blocks a host action (deleting `node_modules`, editing the lockfile). **Risk:** `dev_container.sh` is shared by every builder stack; global npm/pnpm paths in the image assume root. **Cost:** about 1 h in builder plus testing across stacks.
+- **Builder auto-detect for `video`.** ADR-0003 planned an auto-detect rule (`remotion` in `package.json`, ahead of `playwright`). v1.B set `STACK := video` explicitly instead, because builder's `Makefile` has uncommitted Playwright-stack work from another session. **Trigger:** once that work is committed. **Cost:** 5 min.

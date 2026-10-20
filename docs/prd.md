@@ -76,7 +76,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 | Phase | Status | Title |
 |---|---|---|
 | v1.A | ✅ done 2026-10-20 | Kickoff / decisions lock — stack, container layout, project-file + manifest schema (ADR-0002–0005) |
-| v1.B | ⏳ planned | Container + POC on lamillrentals.com — builder `video` stack; record the live site; 10 s scene; 16:9 + 9:16; contact sheet |
+| v1.B | ✅ done 2026-10-20 | Container + POC on lamillrentals.com — builder `video` stack; record the live site; 10 s scene; 16:9 + 9:16; contact sheet |
 | v1.C | ⏳ planned | Project file — scenes as data (`videomill-project-v1`), single-scene re-render |
 | v1.D | ⏳ planned | TTS provider interface + Kokoro adapter + burned-in captions + SRT |
 | v1.E | ⏳ planned | Brand profiles — shared LaMill + lamillrentals.com |
@@ -87,7 +87,6 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 #### Design notes
 
-- **v1.B** — plan in `docs/architecture.md § 8`. Subject: https://lamillrentals.com (live, operator-owned, Astro static site). Exit criteria: a lamillrentals.com page recorded (scroll + screenshot) inside the container; one 10 s scene rendered in both formats with a caption + Kokoro line; contact sheet produced; findings written back to this doc. Builder change is its own commit in the builder repo.
 - **v1.C** — locks field-level `project.json` shape (top level fixed in `architecture.md § 3`). Single-scene re-render = per-scene clips keyed by content hash, then concat.
 - **v1.D** — per-segment synthesis; captions segment-timed (ADR-0004). Validate CPU speed + voice quality against the Fiverr benchmark; if Kokoro falls short, a hosted provider is a second adapter, not a rewrite.
 - **v1.G** — first complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof.
@@ -102,7 +101,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 ## 7. Open questions
 
-- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.G (and ideally v1.B's popup test). Where do they live? Video is a large binary — keep outside git (e.g. `.cache/reference/`) or a known host path?
+- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.H (benchmark). Where do they live? Video is a large binary — keep outside git (e.g. `.cache/reference/`) or a known host path?
 
 Resolved in v1.A (2026-10-20): CLI language → all TypeScript (ADR-0002); container recipe → new builder `video` stack (ADR-0003); TTS → Kokoro behind a provider interface (ADR-0004); export contract → `videomill-export-v1` (ADR-0005); v1 channels → YouTube + X only, TikTok deferred to v2 or later.
 

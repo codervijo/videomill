@@ -7,6 +7,9 @@ VideoMill is an internal LaMill CLI that turns real product footage and lamill.i
 All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render), Playwright (recording), Kokoro-82M via `kokoro-js` behind a `TtsProvider` interface (ADR-0004), ffmpeg. Everything runs in Docker via the builder `video` stack (ADR-0003). No Python in this repo.
 
 ## Project structure
+- `src/` — TypeScript: `cli/`, `pipeline/` (idempotent steps), `record/` (Playwright), `tts/` (provider + Kokoro), `remotion/` (compositions), `render/` (render + contact sheet)
+- `projects/<slug>/` — per-video definitions (committed); `media/` inside is gitignored
+- `out/` — renders + contact sheets (gitignored)
 - `docs/` — canonical doc surfaces (PRD, architecture, ADRs, bugs, shipping history, prompt log)
 - `docs/decisions/` — ADRs
 
@@ -15,7 +18,7 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | | Status | Theme |
 |---|---|---|
 | v1.A | ✅ | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
-| v1.B | ⏳ | Container + POC on lamillrentals.com — 10 s scene, both formats, contact sheet |
+| v1.B | ✅ | Container + POC on lamillrentals.com — 10 s scene, both formats, contact sheet |
 | v1.C | ⏳ | Project file — scenes as data, single-scene re-render |
 | v1.D | ⏳ | TTS interface + Kokoro + captions + SRT |
 | v1.E | ⏳ | Brand profiles — LaMill + lamillrentals.com |
@@ -63,7 +66,18 @@ circumstance. The canonical statement is `sites/portfolio/AI_AGENTS.md § Versio
 ## Building info
 Container-first: nothing beyond Docker (and `make`) is installed on the host. Build tooling comes from the central builder (`~/work/projects/builder/`) via a project `Makefile` that includes `$(BUILDER_PATH)/Makefile`, with project overrides in `Makefile.local`. Container recipes reuse `~/work/projects/b2b/` where one fits (e.g. `b2b/ai/playwright`).
 
-Targets land in v1.B (builder `video` stack): `make buildsh` (enter the `videomill` dev container), then `make deps` / `make build` / `make run` / `make test` inside it.
+Builder `video` stack (`STACK := video`; `~/work/projects/builder/{Makefile,Dockerfile}.video`).
+
+Host (Docker + make only):
+```bash
+make up                                        # build image if needed, start `videomill` container, copy builder in
+make x T=deps                                  # pnpm install + Playwright Chromium + Remotion headless shell
+make x T=test                                  # tsc --noEmit
+make x T=run ARGS="render lamillrentals-poc"   # run the CLI in the container
+make sh                                        # interactive shell (or: make buildsh)
+make down                                      # stop the container
+```
+Inside the container: `make deps | build | run ARGS="…" | test`.
 
 ## Distribution / deployment info
 
@@ -75,7 +89,7 @@ Targets land in v1.B (builder `video` stack): `make buildsh` (enter the `videomi
 - **Notes**: No API keys in v1 — TTS is local Kokoro. First run downloads model weights into `.cache/`.
 
 ## How to run
-Not yet runnable.
+`make up && make x T=deps && make x T=run ARGS="render lamillrentals-poc"` → `out/lamillrentals-poc/scene-{16x9,9x16}.mp4` + `contact-*.png`.
 
 ## Key conventions
 - Never fabricate interfaces or claims: real footage, screenshots and SVGs only.

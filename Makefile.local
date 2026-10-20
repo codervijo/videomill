@@ -1,0 +1,33 @@
+# VideoMill project overrides — included last by the builder Makefile.
+
+# Own container (builder default `mb1` is shared); no sudo needed for docker here.
+export CONTAINER_NAME ?= videomill
+export DOCKER_CMD ?= docker
+# Remotion Studio (3000 in container); host 3000 is commonly taken.
+export HOST_PORT ?= 3333
+export CONTAINER_PORT ?= 3000
+
+BUILDER_HOST_PATH ?= $(HOME)/work/projects/builder
+T ?= run
+
+.PHONY: up sh x down
+
+# Host: build image if needed, start the container, copy builder in.
+up:
+	@if [ -f /.dockerenv ]; then echo "✗ 'make up' runs on the host"; exit 1; fi
+	@DOCKERFILE_PATH="$(BUILDER_HOST_PATH)" DOCKERFILE_NAME="Dockerfile.video" \
+		bash "$(BUILDER_HOST_PATH)/dev_container.sh" start
+	@$(DOCKER_CMD) exec $(CONTAINER_NAME) bash -lc "rm -rf /usr/src/builder && mkdir -p /usr/src/builder"
+	@$(DOCKER_CMD) cp "$(BUILDER_HOST_PATH)/." "$(CONTAINER_NAME):/usr/src/builder"
+	@echo "✓ $(CONTAINER_NAME) up — builder copied to /usr/src/builder"
+
+# Host: interactive shell in the running container.
+sh:
+	@$(DOCKER_CMD) exec -it $(CONTAINER_NAME) bash
+
+# Host: run a make target inside the container, e.g. make x T=run ARGS="render lamillrentals-poc"
+x:
+	@$(DOCKER_CMD) exec -w /usr/src/app $(CONTAINER_NAME) make $(T) ARGS='$(ARGS)'
+
+down:
+	@bash "$(BUILDER_HOST_PATH)/dev_container.sh" stop

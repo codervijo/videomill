@@ -12,6 +12,25 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.B — Container + POC on lamillrentals.com (shipped 2026-10-20)
+
+All exit criteria met in one pass:
+- ✓ The `videomill` container builds from the new builder `video` stack. Builder gained two new files only (`Dockerfile.video`, `Makefile.video`), which are uncommitted in the builder repo.
+- ✓ https://lamillrentals.com recorded in the container at 16x9 (1920 × 1) and 9x16 (540 × 2), scroll `.webm` plus full-page PNG, in about 6–7 s per format.
+- ✓ Kokoro narration (`af_heart`, q8, CPU) from the site's own hero copy: 10.38 s of audio in 11.0 s, including first-run model load.
+- ✓ `SiteScroll` scene rendered in both formats: H.264/AAC, 1920×1080 and 1080×1920, 30 fps, 11.9 s. The first render took 31 s (webpack bundle included), the second format 8.5 s.
+- ✓ ffmpeg contact sheets for both formats, checked visually: smooth monotonic pan, readable caption, sharp 9x16 frames.
+- ✓ A re-run with no changes skips every step. Changing the scene code re-renders only the renders and contact sheets.
+
+Decisions and findings:
+- **Screenshot pan over Playwright video** for page content (see `architecture.md § 2 Site recording`).
+- **Remotion pinned exactly (4.0.537)**, since `remotion` and `@remotion/*` must match.
+- **Browsers installed by `make deps`, not baked into the image**, so Playwright and Remotion browser versions follow the lockfile.
+- **Explicit `STACK := video`** instead of the auto-detect rule in ADR-0003, because the builder `Makefile` had another session's uncommitted work. Logged as a tracked refactor.
+- **Host-side `Makefile.local` targets** (`up`, `x`, `sh`, `down`), because builder's `buildsh` is interactive-only.
+- **Caption box opacity 0.94**: at 0.85, page text showed through.
+- Issues logged in `architecture.md § 9/§ 10`: root-owned bind-mount files, quiet narration (mean −26.5 dB), disk footprint.
+
 ## v1.A — Kickoff / decisions lock (shipped 2026-10-20)
 
 Operator decisions, taken from four options with tradeoffs:
