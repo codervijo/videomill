@@ -41,4 +41,13 @@ Same commit moves the entry + fixes the bug — atomic. Don't delete fixed entri
 
 ## Fixed bugs
 
-(Move entries here when fixed.)
+### 2026-10-20 — Renders unreadable in snap browsers (ERR_ACCESS_DENIED)
+
+- **Repro:** `make x T=run ARGS="render lamillrentals-poc"`, then open `out/lamillrentals-poc/scene-9x16.mp4` in snap Chromium.
+- **Expected:** the video plays.
+- **Actual:** `ERR_ACCESS_DENIED`.
+- **Where:** the container runs as root (builder `dev_container.sh`), so bind-mounted outputs are root-owned. Snap AppArmor `owner` rules then deny them.
+- **Severity:** major. It blocks reviewing renders.
+- **Notes:** symptom patch: `make x` runs `chown -R` back to the host UID after every command. The root fix is tracked in `architecture.md § 10` (container user = host user).
+
+**Fixed in** — v1.B follow-up commit (`Makefile.local` `x` target).

@@ -23,3 +23,7 @@
 > use lamillrentals.com for the first render to prove the pipeline end to end, then do the extension video as the benchmark test.
 
 > commit and start v1.B
+
+> fidn latest screenshot - still installing mp4 on my ubuntu
+> (snap Chromium: ERR_ACCESS_DENIED on scene-9x16.mp4)
+> commit this and start v1.C

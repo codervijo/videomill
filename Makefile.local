@@ -26,8 +26,12 @@ sh:
 	@$(DOCKER_CMD) exec -it $(CONTAINER_NAME) bash
 
 # Host: run a make target inside the container, e.g. make x T=run ARGS="render lamillrentals-poc"
+#   Container runs as root; hand files back to the host user afterwards so
+#   snap apps (AppArmor `owner` rules) and plain `rm` work. Symptom patch —
+#   root fix tracked in docs/architecture.md § 10 (container user = host user).
 x:
-	@$(DOCKER_CMD) exec -w /usr/src/app $(CONTAINER_NAME) make $(T) ARGS='$(ARGS)'
+	@$(DOCKER_CMD) exec -w /usr/src/app $(CONTAINER_NAME) make $(T) ARGS='$(ARGS)'; rc=$$?; \
+		$(DOCKER_CMD) exec $(CONTAINER_NAME) chown -R $$(id -u):$$(id -g) /usr/src/app; exit $$rc
 
 down:
 	@bash "$(BUILDER_HOST_PATH)/dev_container.sh" stop
