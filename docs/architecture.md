@@ -41,9 +41,9 @@ Rules:
 - Render and approve are separate: render refuses to run unless `project.json` is approved (v1.F).
 - Claude drafting happens in the operator's Claude Code session editing `project.json`; the CLI makes no LLM calls in v1.
 
-### Extension popup recording (v1.B — riskiest piece)
+### Extension popup recording (v1.H — riskiest piece, benchmark test)
 
-Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.B.
+Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.H.
 
 ## 3. Data shapes / schemas
 
@@ -129,18 +129,18 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-### v1.B — container + proof of concept
+### v1.B — container + proof of concept on lamillrentals.com
 
 1. Builder: add `Makefile.video` + `Dockerfile.video`; auto-detect `remotion` in `package.json` before the `playwright` rule. (Separate commit in the builder repo.)
 2. VideoMill: `Makefile` builder include, `Makefile.local` with `CONTAINER_NAME=videomill`, minimal `package.json`.
-3. Record a Chrome extension popup with Playwright in the container (persistent context, unpacked extension, Xvfb).
+3. Record https://lamillrentals.com with Playwright in the container: a smooth scroll capture of the homepage (video) + full-page screenshot, at both a desktop and a mobile viewport.
 4. One 10-second Remotion scene from that footage with a caption and one Kokoro TTS line.
 5. Render 16:9 and 9:16; generate a contact sheet (ffmpeg tile).
 6. Report what worked, what failed, and any plan change → update this doc + PRD.
 
 ## 9. Risks
 
-- **Extension popup capture** (§ 2) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
+- **Extension popup capture** (§ 2, v1.H) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
 - **Kokoro on CPU** — synthesis speed and voice quality vs. the Fiverr benchmark unknown until v1.D. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).
 - **Image size** — Playwright Chromium + Remotion Chrome Headless Shell + ffmpeg.

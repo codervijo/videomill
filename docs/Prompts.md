@@ -19,3 +19,5 @@
 > start v1.A — operator picked: all TypeScript; new builder `video` stack; TTS "use kokoro"; v1 phases v1.A–v1.H as proposed.
 
 > commit v1.A, you can push tiktok to v2 or v3 - x and youtube are the highest prio for v1
+
+> use lamillrentals.com for the first render to prove the pipeline end to end, then do the extension video as the benchmark test.

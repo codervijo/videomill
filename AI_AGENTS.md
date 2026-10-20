@@ -15,13 +15,14 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | | Status | Theme |
 |---|---|---|
 | v1.A | ✅ | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
-| v1.B | ⏳ | Container + POC — extension popup, 10 s scene, both formats, contact sheet |
+| v1.B | ⏳ | Container + POC on lamillrentals.com — 10 s scene, both formats, contact sheet |
 | v1.C | ⏳ | Project file — scenes as data, single-scene re-render |
 | v1.D | ⏳ | TTS interface + Kokoro + captions + SRT |
-| v1.E | ⏳ | Brand profiles |
+| v1.E | ⏳ | Brand profiles — LaMill + lamillrentals.com |
 | v1.F | ⏳ | Script/storyboard approval gate |
-| v1.G | ⏳ | Reproduce the Fiverr video |
-| v1.H | ⏳ | Manifest export + first build-in-public video |
+| v1.G | ⏳ | lamillrentals.com end to end + manifest export |
+| v1.H | ⏳ | Benchmark: extension popup + Fiverr repro |
+| v1.I | ⏳ | First build-in-public video |
 
 ## Versioning convention
 

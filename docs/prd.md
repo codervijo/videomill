@@ -67,29 +67,31 @@ Tier-grouped structure. Each tier gets a `### vN` section with two children: `##
 
 Strict two-level versioning only: `vN` tier, `vN.X` phase. `vN.A` is always the planning / decisions-lock phase; build starts at `.B`. Never three-level (`vN.X.Y`), never parallel schemes (`0.1.0`, `Sprint N`, `Phase 1.A`, `v1.B(draft)`). Mid-tier follow-up work → renumber the later phase letters, don't add a sub-level. Full rule: `AI_AGENTS.md § Versioning convention`.
 
-### v1 — first milestone: Fiverr repro + first build-in-public video
+### v1 — first milestone: lamillrentals.com end to end + Fiverr benchmark + first build-in-public video
 
-Ends at the brief's first milestone. Later tiers (not scoped yet): P1 QA automation, P1 build-in-public templates, second-site onboarding, TikTok channel (v2 or later), P2 items. v1 channels are YouTube and X only — highest priority.
+Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.com** first, then the Chrome-extension video as the **benchmark test** against the Fiverr reference. Later tiers (not scoped yet): P1 QA automation, P1 build-in-public templates, second-site onboarding, TikTok channel (v2 or later), P2 items. v1 channels are YouTube and X only — highest priority.
 
 #### Phases
 
 | Phase | Status | Title |
 |---|---|---|
 | v1.A | ✅ done 2026-10-20 | Kickoff / decisions lock — stack, container layout, project-file + manifest schema (ADR-0002–0005) |
-| v1.B | ⏳ planned | Container + POC — builder `video` stack; record extension popup; 10 s scene; 16:9 + 9:16; contact sheet |
+| v1.B | ⏳ planned | Container + POC on lamillrentals.com — builder `video` stack; record the live site; 10 s scene; 16:9 + 9:16; contact sheet |
 | v1.C | ⏳ planned | Project file — scenes as data (`videomill-project-v1`), single-scene re-render |
 | v1.D | ⏳ planned | TTS provider interface + Kokoro adapter + burned-in captions + SRT |
-| v1.E | ⏳ planned | Brand profiles — shared LaMill + one site |
+| v1.E | ⏳ planned | Brand profiles — shared LaMill + lamillrentals.com |
 | v1.F | ⏳ planned | Script/storyboard draft + approval gate |
-| v1.G | ⏳ planned | Reproduce the Fiverr video in 16:9 + 9:16 |
-| v1.H | ⏳ planned | `manifest.json` export (`videomill-export-v1`) + first build-in-public video |
+| v1.G | ⏳ planned | lamillrentals.com site promo end to end — approve → render → `manifest.json` export (`videomill-export-v1`) |
+| v1.H | ⏳ planned | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
+| v1.I | ⏳ planned | First lamill.io build-in-public video |
 
 #### Design notes
 
-- **v1.B** — plan in `docs/architecture.md § 8`. Exit criteria: extension popup recorded reliably inside the container; one 10 s scene rendered in both formats with a caption + Kokoro line; contact sheet produced; findings written back to this doc. Builder change is its own commit in the builder repo.
+- **v1.B** — plan in `docs/architecture.md § 8`. Subject: https://lamillrentals.com (live, operator-owned, Astro static site). Exit criteria: a lamillrentals.com page recorded (scroll + screenshot) inside the container; one 10 s scene rendered in both formats with a caption + Kokoro line; contact sheet produced; findings written back to this doc. Builder change is its own commit in the builder repo.
 - **v1.C** — locks field-level `project.json` shape (top level fixed in `architecture.md § 3`). Single-scene re-render = per-scene clips keyed by content hash, then concat.
 - **v1.D** — per-segment synthesis; captions segment-timed (ADR-0004). Validate CPU speed + voice quality against the Fiverr benchmark; if Kokoro falls short, a hosted provider is a second adapter, not a rewrite.
-- **v1.G** — needs the Fiverr reference video and the extension it shows (see § 7).
+- **v1.G** — first complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof.
+- **v1.H** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
 
 ## 6. Conformance rules
 
