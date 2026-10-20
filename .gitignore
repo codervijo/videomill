@@ -37,3 +37,8 @@ recordings/
 .DS_Store
 .idea/
 .vscode/
+
+# VideoMill state (ADR-0003 / ADR-0005)
+exports/
+.cache/
+projects/*/media/

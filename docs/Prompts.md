@@ -13,3 +13,9 @@
 > use builder Makefiles and also b2b whereever appropriate (my local dirs/repos)
 
 > use custom skills to do project init
+
+> /feature-table
+
+> start v1.A — operator picked: all TypeScript; new builder `video` stack; TTS "use kokoro"; v1 phases v1.A–v1.H as proposed.
+
+> commit v1.A, you can push tiktok to v2 or v3 - x and youtube are the highest prio for v1

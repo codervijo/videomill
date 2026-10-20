@@ -88,24 +88,26 @@ Any concept that touches more than one module gets its own constants module imme
 
 ### Lazy-import error wrap
 
-Any module that does `from optional_dep import X` inside a function must wrap it in `try / except ImportError` and raise a typed error naming the fix command:
+Any dynamic `import()` of an optional or heavy dependency (e.g. `kokoro-js`) must catch the failure and throw a typed error naming the fix command:
 
-```python
-def _do_thing():
-    try:
-        from some_optional_pkg import Client
-    except ImportError as e:
-        raise MyTypedError(
-            f"some_optional_pkg not installed ({e}). "
-            f"Run `uv sync` to install."
-        ) from e
+```ts
+async function loadKokoro() {
+  try {
+    return await import("kokoro-js");
+  } catch (e) {
+    throw new VideoMillError(
+      `kokoro-js not installed (${(e as Error).message}). ` +
+      "Run `make deps` inside the container (`make buildsh`)."
+    );
+  }
+}
 ```
 
-Raw `ModuleNotFoundError` stack traces reach operators who have no idea what to do. (Same idea applies to dynamic `import()` in TypeScript if that stack is chosen.)
+Raw `ERR_MODULE_NOT_FOUND` stack traces reach the operator with no clue what to do.
 
-### httpx-direct over framework SDKs
+### fetch-direct over framework SDKs
 
-When wiring a new external API (e.g. a TTS provider), default to a hand-written HTTP client with a mock transport for tests. Reach for an SDK only if the API has complex ceremony and the SDK genuinely reduces code. SDK-based modules are noticeably harder to test and slower to run.
+When wiring a new external API (e.g. a future hosted TTS provider), default to a hand-written client over `fetch`, with the `fetch` function injectable so tests pass a fake. Reach for an SDK only if the API has complex ceremony and the SDK genuinely reduces code. SDK-based modules are noticeably harder to test and slower to run.
 
 ### Pipeline idempotency markers
 
@@ -130,7 +132,15 @@ When you write `// TODO: fold this into X later`, that's a tracked refactor — 
 
 ## Locked target shapes
 
-Designs aligned but not yet executed. When picked up, no need to re-debate. (Add entries here as they accumulate.)
+Designs aligned but not yet executed. When picked up, no need to re-debate.
+
+### 🔒 Export contract `videomill-export-v1` (ADR-0005, locked 2026-10-20)
+
+Field-level shape in `docs/architecture.md § 3`. Additive-only within v1: new optional fields are fine, while any rename, removal, retype or optional→required change bumps to `-v2` and gets a new ADR. Paths in the manifest are relative to the export folder. Exports are written to a temp dir and renamed into place atomically. **Self-check:** "Would RankMill code written against today's manifest still work after my change?"
+
+### 🔒 `project.json` top level `videomill-project-v1` (locked 2026-10-20; field detail in v1.C)
+
+Top-level keys in `docs/architecture.md § 3`. Any edit to `scenes` after approval drops `approval.status` back to `draft` (via the stored hash). Render never runs on an unapproved project.
 
 ## Deferred decisions
 

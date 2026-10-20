@@ -67,17 +67,29 @@ Tier-grouped structure. Each tier gets a `### vN` section with two children: `##
 
 Strict two-level versioning only: `vN` tier, `vN.X` phase. `vN.A` is always the planning / decisions-lock phase; build starts at `.B`. Never three-level (`vN.X.Y`), never parallel schemes (`0.1.0`, `Sprint N`, `Phase 1.A`, `v1.B(draft)`). Mid-tier follow-up work → renumber the later phase letters, don't add a sub-level. Full rule: `AI_AGENTS.md § Versioning convention`.
 
-### v1 — <tier name — operator to confirm>
+### v1 — first milestone: Fiverr repro + first build-in-public video
+
+Ends at the brief's first milestone. Later tiers (not scoped yet): P1 QA automation, P1 build-in-public templates, second-site onboarding, TikTok channel (v2 or later), P2 items. v1 channels are YouTube and X only — highest priority.
 
 #### Phases
 
 | Phase | Status | Title |
 |---|---|---|
-| v1.A | ⏳ planned | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
+| v1.A | ✅ done 2026-10-20 | Kickoff / decisions lock — stack, container layout, project-file + manifest schema (ADR-0002–0005) |
+| v1.B | ⏳ planned | Container + POC — builder `video` stack; record extension popup; 10 s scene; 16:9 + 9:16; contact sheet |
+| v1.C | ⏳ planned | Project file — scenes as data (`videomill-project-v1`), single-scene re-render |
+| v1.D | ⏳ planned | TTS provider interface + Kokoro adapter + burned-in captions + SRT |
+| v1.E | ⏳ planned | Brand profiles — shared LaMill + one site |
+| v1.F | ⏳ planned | Script/storyboard draft + approval gate |
+| v1.G | ⏳ planned | Reproduce the Fiverr video in 16:9 + 9:16 |
+| v1.H | ⏳ planned | `manifest.json` export (`videomill-export-v1`) + first build-in-public video |
 
 #### Design notes
 
-(Phase-specific design notes go here while in-flight. Move to `shipping-history.md` once shipped.)
+- **v1.B** — plan in `docs/architecture.md § 8`. Exit criteria: extension popup recorded reliably inside the container; one 10 s scene rendered in both formats with a caption + Kokoro line; contact sheet produced; findings written back to this doc. Builder change is its own commit in the builder repo.
+- **v1.C** — locks field-level `project.json` shape (top level fixed in `architecture.md § 3`). Single-scene re-render = per-scene clips keyed by content hash, then concat.
+- **v1.D** — per-segment synthesis; captions segment-timed (ADR-0004). Validate CPU speed + voice quality against the Fiverr benchmark; if Kokoro falls short, a hosted provider is a second adapter, not a rewrite.
+- **v1.G** — needs the Fiverr reference video and the extension it shows (see § 7).
 
 ## 6. Conformance rules
 
@@ -88,10 +100,9 @@ Strict two-level versioning only: `vN` tier, `vN.X` phase. `vN.A` is always the 
 
 ## 7. Open questions
 
-- **2026-10-20 — Orchestration/CLI language.** Brief locks TypeScript (Remotion is Node). Operator's other CLIs (lamill, RankMill) are Python/uv. Options: all-TypeScript in the container, or Python/uv CLI driving Remotion as a containerized subprocess. ADR-worthy; decide in v1.A.
-- **2026-10-20 — Builder stack for Remotion.** No `Makefile.remotion` / `Dockerfile.remotion` in builder yet; b2b has `ai/playwright`. Add a new builder stack, or extend `playwright`?
-- **2026-10-20 — TTS provider** for the first implementation.
-- **2026-10-20 — Fiverr reference video** needs to be placed in the repo (or a known path) for v1 reproduction.
+- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.G (and ideally v1.B's popup test). Where do they live? Video is a large binary — keep outside git (e.g. `.cache/reference/`) or a known host path?
+
+Resolved in v1.A (2026-10-20): CLI language → all TypeScript (ADR-0002); container recipe → new builder `video` stack (ADR-0003); TTS → Kokoro behind a provider interface (ADR-0004); export contract → `videomill-export-v1` (ADR-0005); v1 channels → YouTube + X only, TikTok deferred to v2 or later.
 
 ## 8. References
 

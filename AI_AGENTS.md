@@ -4,7 +4,7 @@
 VideoMill is an internal LaMill CLI that turns real product footage and lamill.io portfolio page content into short, faceless, branded social videos (site promos + lamill.io build-in-public). It makes videos only; RankMill (separate CLI) posts, tests and ranks them via an output folder + `manifest.json` contract.
 
 ## Stack
-<OPEN — see `docs/prd.md § 7 Open questions`. Fixed parts: Remotion (composition + render), Playwright (recording), TTS behind a provider interface, all heavy tooling inside Docker. Orchestration/CLI language (TypeScript vs Python/uv) not yet decided.>
+All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render), Playwright (recording), Kokoro-82M via `kokoro-js` behind a `TtsProvider` interface (ADR-0004), ffmpeg. Everything runs in Docker via the builder `video` stack (ADR-0003). No Python in this repo.
 
 ## Project structure
 - `docs/` — canonical doc surfaces (PRD, architecture, ADRs, bugs, shipping history, prompt log)
@@ -14,7 +14,14 @@ VideoMill is an internal LaMill CLI that turns real product footage and lamill.i
 
 | | Status | Theme |
 |---|---|---|
-| v1.A | ⏳ | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
+| v1.A | ✅ | Kickoff / decisions lock — stack, container layout, project-file + manifest schema |
+| v1.B | ⏳ | Container + POC — extension popup, 10 s scene, both formats, contact sheet |
+| v1.C | ⏳ | Project file — scenes as data, single-scene re-render |
+| v1.D | ⏳ | TTS interface + Kokoro + captions + SRT |
+| v1.E | ⏳ | Brand profiles |
+| v1.F | ⏳ | Script/storyboard approval gate |
+| v1.G | ⏳ | Reproduce the Fiverr video |
+| v1.H | ⏳ | Manifest export + first build-in-public video |
 
 ## Versioning convention
 
@@ -55,7 +62,7 @@ circumstance. The canonical statement is `sites/portfolio/AI_AGENTS.md § Versio
 ## Building info
 Container-first: nothing beyond Docker (and `make`) is installed on the host. Build tooling comes from the central builder (`~/work/projects/builder/`) via a project `Makefile` that includes `$(BUILDER_PATH)/Makefile`, with project overrides in `Makefile.local`. Container recipes reuse `~/work/projects/b2b/` where one fits (e.g. `b2b/ai/playwright`).
 
-<Concrete targets TBD once the stack is locked in v1.A — expected: `make buildsh` (enter dev container), `make deps` / `make build` / `make run` / `make test`.>
+Targets land in v1.B (builder `video` stack): `make buildsh` (enter the `videomill` dev container), then `make deps` / `make build` / `make run` / `make test` inside it.
 
 ## Distribution / deployment info
 
@@ -64,7 +71,7 @@ Container-first: nothing beyond Docker (and `make`) is installed on the host. Bu
 - **Live URL / install command**: not yet
 - **Last released version / deployed commit**: unknown
 - **Release / deploy trigger**: n/a
-- **Notes**: TTS provider keys will be needed (provider TBD).
+- **Notes**: No API keys in v1 — TTS is local Kokoro. First run downloads model weights into `.cache/`.
 
 ## How to run
 Not yet runnable.

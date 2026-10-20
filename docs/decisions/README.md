@@ -46,3 +46,7 @@ Don't edit accepted ADRs. To reverse a decision:
 | ID | Title | Status | Date |
 |---|---|---|---|
 | ADR-0001 | Record architecture decisions | Accepted | 2026-10-20 |
+| ADR-0002 | All TypeScript on Node + pnpm | Accepted | 2026-10-20 |
+| ADR-0003 | Container-first via a new builder `video` stack | Accepted | 2026-10-20 |
+| ADR-0004 | TTS provider interface, Kokoro default | Accepted | 2026-10-20 |
+| ADR-0005 | Export folder + `videomill-export-v1` manifest contract | Accepted | 2026-10-20 |
