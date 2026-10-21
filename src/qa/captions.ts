@@ -1,5 +1,5 @@
 // Caption QA: every caption box sits inside the format's safe zone (v1.H) and
-// intersects no visible recorded anchor box (v1.I). Caption boxes are measured
+// intersects no visible recorded anchor box or page text run (v1.I). Caption boxes are measured
 // in Chromium with the render's own styles (remotion/caption.ts); anchors' on-
 // screen boxes come from the recorded boxes through the camera view.
 import { readFileSync } from "node:fs";
@@ -14,6 +14,7 @@ import { fontStack, type FontRef } from "../remotion/fonts.js";
 export type Timeline = {
   format: Format;
   fps: number;
+  pageBottom?: number; // output px; page footage ends here (v1.I). Absent = full frame (earlier exports).
   font?: FontRef; // file relative to the project's media dir
   scenes: { id: string; capture: string; offset: number; segments: Segment[]; phrases: { caption: string; start: number; end: number }[] }[];
 };
@@ -39,9 +40,9 @@ export function safeRect(f: Format): Rect {
   return { x: z.left, y: z.top, w: width - z.left - z.right, h: height - z.top - z.bottom };
 }
 
-/** Where the caption overlaps the anchor's visible box through `view`, or null. */
-export function overlapOf(caption: Rect, box: Rect, view: View, f: Format): Rect | null {
-  const frame = { x: 0, y: 0, w: FORMATS[f].width, h: FORMATS[f].height };
+/** Where the caption overlaps the box's visible part through `view`, or null. Page footage spans 0–`bottom` px. */
+export function overlapOf(caption: Rect, box: Rect, view: View, f: Format, bottom: number = FORMATS[f].height): Rect | null {
+  const frame = { x: 0, y: 0, w: FORMATS[f].width, h: bottom };
   const o = intersect(caption, intersect(onScreen(box, view, f), frame));
   return o.w >= 1 && o.h >= 1 ? o : null; // sub-pixel touches are rounding, not overlap
 }
@@ -62,10 +63,13 @@ export function captionIssues(t: Timeline, metas: Record<string, CaptureMeta>, b
       // Every view the phrase is shown over: each overlapping segment's start and end.
       const views = s.segments.filter((g) => g.start < ph.end && g.end > ph.start).flatMap((g) => [g.from, g.to]);
       for (const [name, anchor] of Object.entries(meta.anchors)) {
-        const worst = views.map((v) => overlapOf(box, anchor, v, t.format)).filter((o) => o !== null)
+        const worst = views.map((v) => overlapOf(box, anchor, v, t.format, t.pageBottom)).filter((o) => o !== null)
           .sort((a, b) => area(b) - area(a))[0];
         if (worst) issue(`overlaps ${name} (${Math.round(worst.w)}×${Math.round(worst.h)} px)`);
       }
+      // Page text the caption hides, in any of those views (captures before meta v3 have none).
+      const hidden = [...new Set((meta.text ?? []).filter((r) => views.some((v) => overlapOf(box, r.box, v, t.format, t.pageBottom))).map((r) => r.text))];
+      if (hidden.length) issue(`covers page text ${hidden.slice(0, 3).map((x) => `“${x.length > 40 ? x.slice(0, 39) + "…" : x}”`).join(", ")}${hidden.length > 3 ? ` +${hidden.length - 3} more` : ""}`);
     }
   }
   return issues;

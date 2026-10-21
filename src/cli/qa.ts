@@ -12,7 +12,7 @@ import { captureFiles, type CaptureMeta } from "../record/site.js";
 import { measureLoudness, probeDurationSec, silences } from "../render/render.js";
 import { requireApproved } from "./approve.js";
 
-const QA_VERSION = 2; // bump when a check changes, so passed results re-run
+const QA_VERSION = 3; // bump when a check changes, so passed results re-run
 
 export const qaFiles = (slug: string, f: Format) => {
   const out = resolve("out", slug);
@@ -60,7 +60,7 @@ async function checkFormat(p: Project, f: Format): Promise<Check[]> {
     {
       name: "captions",
       ok: issues.length === 0,
-      detail: issues.length === 0 ? `${texts.length} caption(s) inside the safe zone, none over a visible anchor`
+      detail: issues.length === 0 ? `${texts.length} caption(s) inside the safe zone, none over page footage`
         : issues.map((x) => `${x.scene} @${x.at.toFixed(1)}s “${x.caption}”: ${x.problem}`).join("\n"),
     },
     {

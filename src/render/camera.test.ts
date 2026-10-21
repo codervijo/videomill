@@ -44,9 +44,9 @@ test("zoom fits the element at `fill`, centred, and narrows the view", () => {
   assert.ok(z.to.w >= 1080 / 2.5, "capped at MAX_ZOOM");
   const cx = z.to.x + z.to.w / 2;
   assert.ok(Math.abs(cx - 300) < 1, `centred on card x (got ${cx})`);
-  // Vertically: centred between the safe-zone top (288) and the two-line caption band top (1224 − 175).
+  // Vertically: centred between the safe-zone top (288) and the page footage bottom (caption band top 1049 − 24).
   const cy = (3000 + 150 - z.to.y) * (1080 / z.to.w);
-  assert.ok(Math.abs(cy - (288 + 1049) / 2) < 1, `card centre above the caption band (got ${cy})`);
+  assert.ok(Math.abs(cy - (288 + 1025) / 2) < 1, `card centre in the clear area (got ${cy})`);
 });
 
 test("narration longer than shots holds the last framing to the end", () => {

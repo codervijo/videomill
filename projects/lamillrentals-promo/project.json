@@ -13,8 +13,8 @@
   "voice": "af_heart",
   "approval": {
     "status": "approved",
-    "approvedAt": "2026-10-21T03:02:58.013Z",
-    "hash": "9a081ed42d207dc5"
+    "approvedAt": "2026-10-21T03:22:53.488Z",
+    "hash": "16b5486dfa666c3c"
   },
   "captures": [
     {
@@ -34,7 +34,10 @@
       "minSeconds": 3,
       "shots": [
         {
-          "kind": "hold",
+          "kind": "zoom",
+          "seconds": 0.6,
+          "target": "section:has(h1) .max-w-3xl",
+          "fill": 0.95,
           "say": "Party and event rentals in Salinas and Monterey.",
           "caption": "Party & event rentals in Salinas & Monterey"
         },
@@ -88,7 +91,10 @@
           "say": "No minimum order."
         },
         {
-          "kind": "hold",
+          "kind": "zoom",
+          "seconds": 0.8,
+          "target": "section:has(h1) .max-w-3xl",
+          "fill": 0.95,
           "say": "Get a quote at lamillrentals.com.",
           "caption": "Get a quote · lamillrentals.com"
         },

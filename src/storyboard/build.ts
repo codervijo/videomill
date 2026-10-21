@@ -10,6 +10,7 @@ import type { Project } from "../project/schema.js";
 import type { CaptureMeta } from "../record/site.js";
 import { planCamera, type View } from "../render/camera.js";
 import { phrasesOf, timeScene } from "../render/timeline.js";
+import { pageBottom } from "../remotion/caption.js";
 
 const THUMB = { "16x9": 320, "9x16": 180 } as const; // thumbnail width, px
 
@@ -53,7 +54,8 @@ function thumb(f: Format, view: View, imgW: number, src: string): string {
   const w = THUMB[f];
   const h = Math.round(w * (FORMATS[f].height / FORMATS[f].width));
   const k = w / view.w;
-  return `<div class="thumb" style="width:${w}px;height:${h}px"><img src="${esc(src)}" style="width:${imgW * k}px;transform:translate(${-view.x * k}px,${-view.y * k}px)"></div>`;
+  const strip = Math.round(pageBottom(f, FORMATS[f].width, FORMATS[f].height) * (w / FORMATS[f].width)); // caption strip hides the page below (v1.I)
+  return `<div class="thumb" style="width:${w}px;height:${h}px"><img src="${esc(src)}" style="width:${imgW * k}px;transform:translate(${-view.x * k}px,${-view.y * k}px)"><div class="strip" style="top:${strip}px"></div></div>`;
 }
 
 export function storyboardHtml(inp: StoryboardInput, htmlPath: string): string {
@@ -84,7 +86,7 @@ h1{margin:0 0 4px}h2{margin:28px 0 8px;border-bottom:1px solid #e5e7eb}
 .meta{color:#6b7280}.status{font-weight:700;color:${inp.status === "approved" ? "#15803d" : "#b45309"}}
 table{border-collapse:collapse}td{vertical-align:top;padding:6px 10px 6px 0}
 .lbl{color:#6b7280;font-size:13px;width:60px}.thumb{overflow:hidden;position:relative;border:1px solid #d1d5db;background:#f3f4f6}
-.thumb img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none}
+.thumb img{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none}.strip{position:absolute;left:0;right:0;bottom:0;background:#fff}
 .txt{width:360px}.say{font-size:18px}.cap{color:#6b7280;font-size:14px;margin-top:4px}
 </style></head><body>
 <h1>${esc(p.slug)}</h1>

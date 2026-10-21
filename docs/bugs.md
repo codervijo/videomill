@@ -37,6 +37,10 @@ Same commit moves the entry + fixes the bug — atomic. Don't delete fixed entri
 
 ## Open bugs
 
+(None.)
+
+## Fixed bugs
+
 ### 2026-10-20 — 9:16 categories captions cover the Tables card; `qa` passes
 
 - **Repro** — `videomill render lamillrentals-promo && videomill qa lamillrentals-promo`; open `out/lamillrentals-promo/lamillrentals-promo-9x16-contact.png`, row 1 frames 5–6 and row 2 frames 1–3.
@@ -45,8 +49,7 @@ Same commit moves the entry + fixes the bug — atomic. Don't delete fixed entri
 - **Where** — `src/qa/captions.ts` `captionIssues()` checks `meta.anchors` only (script-named selectors: Rental Categories h2, Chairs card, hero line); the recorder (`src/record/site.ts`) doesn't record other element boxes. Scene `categories` in `projects/lamillrentals-promo/project.json`.
 - **Severity** — major (the defect class v1.I set out to catch; seen by Claude on the contact sheet, not reported by the operator).
 - **Notes** — root cause: `qa`'s view of the page is limited to anchors. Fix sketch: the recorder also stores boxes for visible text/card elements, and `qa` checks captions against all of them; then reframe the 9:16 categories scene (e.g. hold on the h2 + Chairs card only).
-
-## Fixed bugs
+- **Fixed in** — the commit that moved this entry: "v1.I: caption strip …" (caption strip + text-run qa; operator chose option 1, 2026-10-20)
 
 ### 2026-10-20 — Renders unreadable in snap browsers (ERR_ACCESS_DENIED)
 

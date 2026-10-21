@@ -61,8 +61,10 @@ Rules:
 `src/record/site.ts`, one Chromium context per format:
 - Viewport × `deviceScaleFactor` = output frame width (16x9: **1280 × 1.5** since v1.C; 9x16: 540 × 2, `isMobile`). So a full-page screenshot maps 1:1 onto video pixels and stays sharp. v1.B used 1920 × 1 for 16x9, which made desktop pages tiny and sparse; 1280 @1.5× reads about 1.5 times larger.
 - **Anchors (v1.C):** every scene `from`/`to` that isn't `"top"` is a Playwright selector. At record time each one is resolved to a device-pixel y offset per format and written to `media/<capture>-<format>.json`. A missing anchor fails the record step with `✗`. Framing per format therefore comes from the real layout: the same heading sits at y=1144 on desktop and y=2048 on mobile.
+- **Text runs (v1.I, meta version 3):** the recorder also writes the device-pixel box of every visible non-empty text node (`text: [{text, box}]`), so `qa` can see page text the script never names. Captures from meta version 2 fail `render` with `✗ … record --force`.
 - The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
 - The scene (`src/remotion/PageCamera.tsx`) moves a virtual camera over that PNG along segments planned from the scene's shots (next section). Phrase captions and narration play on top (§ Phrases and captions).
+- **Caption strip (v1.I, both formats):** page footage ends at `pageBottom()` (`remotion/caption.ts`: caption band top − 24 px) and fades out over those 24 px into a solid white strip, which holds the captions. So a caption never hides page content. On 16:9 the strip is the bottom ~26% of the frame; on 9:16 it overlaps the platform UI zone below the safe area anyway. Chosen by the operator (2026-10-20) after `qa` found captions covering page text no shot could frame around (the Tables card, hero buttons, the phone line).
 - **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.J).
 
 ### Camera and shots (v1.D)
@@ -78,7 +80,7 @@ Rules:
 - If narration runs longer than the shots, the last framing holds to the end.
 - **No shots** = v1.C behaviour, compiled as hold 0.4 s → pan to `to` (or `+screens`) → hold 0.6 s. So every scene renders through one code path.
 - **Rendering:** each frame interpolates the current segment with ease-in-out cubic. Zoom width interpolates in log space so its speed looks even. The image is resized (not CSS-scaled), so Chromium resamples from source pixels.
-- **Zoom framing (v1.H):** the zoom subject is centred between the safe-zone top and the top of a two-line caption band (`captionBand()` in `remotion/caption.ts`), not the frame centre, so captions don't cover it. Found by `qa` on lamillrentals 9:16, where the frame-centred Chairs card sat 22% under the caption.
+- **Zoom framing (v1.H; v1.I):** the zoom subject is fitted to `fill` of the clear area and centred in it: from the safe-zone top to `pageBottom()` (v1.H: to the caption band top, fitted to the whole frame), not the frame centre, so the strip doesn't cut it. Found by `qa` on lamillrentals 9:16, where the frame-centred Chairs card sat 22% under the caption.
 - **`focus`:** each segment carries the anchor its framing is about (zoom target, or the pan / cut / hold / scene-`from` anchor; none for `top` and `+N` pans). `qa` uses it as the element captions must not cover.
 - **Finding (2026-10-20):** on 9x16, typical mobile elements are already about 94% of the frame width (lamillrentals.com cards are 1016 of 1080 px). So `zoom` with `fill` ≤ 0.94 can't zoom in; it only recenters on the element. Zoom works as intended on 16x9 (Chairs card at the 2.5× cap). A per-shot minimum scale, if wanted, would be an additive field.
 
@@ -103,7 +105,7 @@ Rules:
 ### Storyboard and approval (v1.G)
 
 - **Draft** = Claude Code in the operator's session following the project skill `.claude/skills/videomill-draft/SKILL.md`. Steps: `record` the page, write shots with `say` from the site's own copy only, use real selectors, run `storyboard`, and hand off. The CLI makes no LLM calls.
-- **`storyboard <slug>`** (`src/storyboard/build.ts`) records if needed, then writes `out/<slug>/storyboard.html` and a full-page Playwright screenshot `storyboard.png`. The page shows the status, hash and brand cards, then one row per camera segment: its landing framing per format, cropped from the recorded screenshot with the same view math as `PageCamera`, plus the line spoken from there and its caption. Silent holds that repeat the row above are dropped. Needs no TTS or Remotion, so it takes about a second. It's a `storyboard` step keyed by the approval hash, status, capture stamps and brands.
+- **`storyboard <slug>`** (`src/storyboard/build.ts`) records if needed, then writes `out/<slug>/storyboard.html` and a full-page Playwright screenshot `storyboard.png`. The page shows the status, hash and brand cards, then one row per camera segment: its landing framing per format, cropped from the recorded screenshot with the same view math as `PageCamera` and the caption strip drawn in, plus the line spoken from there and its caption. Silent holds that repeat the row above are dropped. Needs no TTS or Remotion, so it takes about a second. It's a `storyboard` step keyed by the approval hash, status, capture stamps and brands.
 - **`approve <slug>`** refreshes the storyboard, prints the script, and writes `approval { status: "approved", approvedAt, hash }` into the raw JSON, so zod defaults aren't written into the file.
 - **`approvalHash()`** covers `captures`, `scenes`, `voice` and `publish`: everything recorded, said, shown or published. `approvalState()` returns `draft` | `approved` | `edited since approval` (stored hash ≠ current). Brand files are not in the hash; they're committed and reviewed as code.
 - **Gate:** `render` calls `requireApproved()` first. If the content changed it prints a `↷` with the old and new hash, then a `✗` naming the storyboard → approve fix.
@@ -111,7 +113,7 @@ Rules:
 ### QA and export (v1.H)
 
 - **`qa <slug>`** (`src/cli/qa.ts`) refuses unless approved and each format's outputs are `rendered` from the current approval hash. Per format:
-  - **captions** (`src/qa/captions.ts`): each caption is laid out in Playwright Chromium with the render's own styles (`captionStyles()`, shared with `PageCamera`) and brand font, so the measured box is the rendered box. ✗ if the box leaves the safe zone, or *(v1.I)* intersects (≥ 1 px each way) the visible box of **any** recorded anchor in any overlapping segment's start or end view. v1.H's rule (≤ 10% of the `focus` element's area) passed a caption sitting 590×100 px on the Folding Chair card; `captions.test.ts` replays that export (`src/qa/fixtures/export-20261020T233815Z-9x16.json`) as a regression.
+  - **captions** (`src/qa/captions.ts`): each caption is laid out in Playwright Chromium with the render's own styles (`captionStyles()`, shared with `PageCamera`) and brand font, so the measured box is the rendered box. ✗ if the box leaves the safe zone, or *(v1.I)* intersects (≥ 1 px each way) the visible box of **any** recorded anchor, or of any recorded page text run, in any overlapping segment's start or end view. "Visible" = inside the page footage (`timeline.pageBottom`; absent on pre-strip timelines = the whole frame). With the strip this holds by construction; the check catches a caption that grows above the strip (e.g. wraps to three lines). v1.H's rule (≤ 10% of the `focus` element's area) passed a caption sitting 590×100 px on the Folding Chair card; `captions.test.ts` replays that export (`src/qa/fixtures/export-20261020T233815Z-9x16.json`) as a regression.
   - **silence** *(v1.I)*: ffmpeg `silencedetect` (`QA.silenceFloorDb` −50 dB) over the narration span (first phrase start → last phrase end); ✗ on any gap over `QA.maxSilenceSec` (1 s).
   - **duration** *(v1.I)*: within `QA.durationSec` (9x16 15–30 s, 16x9 15–45 s; operator-set).
   - **loudness:** integrated within ±`QA.lufsTolerance` (1 LU) of −14 LUFS and true peak ≤ `QA.maxTruePeak` (−1 dBTP).
@@ -217,7 +219,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/pipeline/step.ts` | `step()` runner: skips when outputs exist and the inputs hash matches `out/<slug>/stamps.json`; prints `✓ ✗ ↷`; `VideoMillError` |
 | `src/project/schema.ts` | zod schema for `project.json`, `approvalHash()`, `approvalState()`, `anchorsFor()`; tests in `schema.test.ts` |
 | `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
-| `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** JSON (`CaptureMeta` version 2: `{x,y,w,h}` per selector, device px) |
+| `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** + visible text-run boxes JSON (`CaptureMeta` version 3: `{x,y,w,h}` per selector and per text node, device px) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
 | `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx`, `BrandCard.tsx` (+ `BrandCard-<f>`), `fonts.ts` |
@@ -231,7 +233,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/export/manifest.ts` | `buildManifest()` (`videomill-export-v1`); tests in `manifest.test.ts` |
 | `src/cli/qa.ts` | `qa`, `qaInputs()`, `requireRendered()` |
 | `src/cli/export.ts` | `export`: gates, atomic folder write, `latest` symlink |
-| `src/remotion/caption.ts` | caption layout (`captionStyles()`, `captionBand()`) shared by render, camera and `qa` |
+| `src/remotion/caption.ts` | caption layout (`captionStyles()`, `captionBand()`, `pageBottom()`) shared by render, camera, storyboard and `qa` |
 | `src/storyboard/build.ts` | storyboard HTML (segment stills per format + script) → PNG via Playwright |
 | `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
 

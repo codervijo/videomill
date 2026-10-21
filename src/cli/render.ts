@@ -1,7 +1,7 @@
 // `record` and `render` — the per-scene pipeline (docs/architecture.md § 2).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { CAPTURE, DEFAULT_VOICE, FPS, LOUDNESS, QA, type Format } from "../constants.js";
+import { CAPTURE, DEFAULT_VOICE, FORMATS, FPS, LOUDNESS, QA, type Format } from "../constants.js";
 import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
 import { loadBrand } from "../brand/schema.js";
 import { requireApproved } from "./approve.js";
@@ -11,7 +11,8 @@ import type { PhraseClip } from "../remotion/PageCamera.js";
 import { loadProject, projectDir } from "../project/load.js";
 import { anchorsFor, approvalHash, type Project } from "../project/schema.js";
 import type { Timeline } from "../qa/captions.js";
-import { captureFiles, recordCapture, type CaptureMeta } from "../record/site.js";
+import { pageBottom } from "../remotion/caption.js";
+import { captureFiles, META_VERSION, recordCapture, type CaptureMeta } from "../record/site.js";
 import { planCamera } from "../render/camera.js";
 import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
 import { phrasesOf, timeScene } from "../render/timeline.js";
@@ -36,7 +37,7 @@ export async function recordAll(c: Pick<ReturnType<typeof ctx>, "p" | "media" | 
     const anchors = anchorsFor(c.p, cap.id);
     for (const f of formats) {
       const files = captureFiles(c.media, cap.id, f);
-      await step(c.stamps, `record ${cap.id} ${f}`, { url: cap.url, f, anchors, capture: CAPTURE[f], meta: 2 }, [files.png, files.meta],
+      await step(c.stamps, `record ${cap.id} ${f}`, { url: cap.url, f, anchors, capture: CAPTURE[f], meta: META_VERSION }, [files.png, files.meta],
         () => recordCapture(cap.url, f, anchors, c.media, cap.id), force);
     }
   }
@@ -120,7 +121,7 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     for (const s of p.scenes) {
       const files = captureFiles(media, s.capture, f);
       const meta: CaptureMeta = JSON.parse(readFileSync(files.meta, "utf8"));
-      if (meta.version !== 2) throw new VideoMillError(`capture ${s.capture} @${f} predates anchor boxes — run \`videomill record ${slug} --force\``);
+      if (meta.version !== META_VERSION) throw new VideoMillError(`capture ${s.capture} @${f} predates meta v${META_VERSION} (text runs) — run \`videomill record ${slug} --force\``);
       const t = timeScene(s, audio[s.id].map((a) => a.sec), FPS);
       const durationInFrames = Math.ceil(t.seconds * FPS);
       const phrases: PhraseClip[] = t.phrases.map((ph, i) => ({ audio: audio[s.id][i].file, caption: ph.caption, start: ph.start, end: ph.end }));
@@ -158,7 +159,7 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     const srt = join(out, `${slug}-${f}.srt`);
     const sheet = join(out, `${slug}-${f}-contact.png`);
     const tlPath = join(out, `timeline-${f}.json`);
-    const timeline: Timeline = { format: f, fps: FPS, font: textFont(brand), scenes: laid };
+    const timeline: Timeline = { format: f, fps: FPS, pageBottom: pageBottom(f, FORMATS[f].width, FORMATS[f].height), font: textFont(brand), scenes: laid };
     await step(stamps, `assemble ${f}`, renders, [joined], async () => concatClips(clips, joined), opts.force);
     await step(stamps, `loudness ${f}`, { joined: stamps.get(`assemble ${f}`), target: LOUDNESS }, [video], async () => {
       const l = normalizeLoudness(joined, video);

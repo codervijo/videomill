@@ -5,7 +5,7 @@ import { FORMATS, SAFE_ZONE, type Format } from "../constants.js";
 import { VideoMillError } from "../pipeline/step.js";
 import type { Scene, Shot } from "../project/schema.js";
 import type { CaptureMeta } from "../record/site.js";
-import { captionBand } from "../remotion/caption.js";
+import { pageBottom } from "../remotion/caption.js";
 
 /** Visible window into the image, in image pixels. Height follows the frame aspect. */
 export type View = { x: number; y: number; w: number };
@@ -42,13 +42,14 @@ export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationS
   };
   /** Full-width view with the anchor near the top of the frame. */
   const at = (a: string): View => (a === "top" ? clamp({ x: 0, y: 0, w: imgW }) : clamp({ x: 0, y: box(a).y - frame.height * ANCHOR_MARGIN, w: imgW }));
-  // Zoom subjects centre in the clear area between the safe-zone top and the
-  // caption band, not the frame centre, so captions don't cover them (v1.H qa).
-  const clearMid = (SAFE_ZONE[f].top + captionBand(f, frame.width, frame.height).top) / 2 / frame.height; // of frame height
-  /** View that fits the element at `fill` of the frame, centred in the clear area. */
+  // Zoom subjects fit and centre in the clear area — safe-zone top to the
+  // bottom of the page footage (v1.I caption strip) — not the whole frame.
+  const clearTop = SAFE_ZONE[f].top / frame.height, clearBottom = pageBottom(f, frame.width, frame.height) / frame.height; // of frame height
+  const clearMid = (clearTop + clearBottom) / 2;
+  /** View that fits the element at `fill` of the clear area, centred in it. */
   const zoomTo = (a: string, fill: number): View => {
     const b = box(a);
-    const w = Math.max(b.w / fill, (b.h / fill) / aspect);
+    const w = Math.max(b.w / fill, (b.h / fill) / (aspect * (clearBottom - clearTop)));
     const cw = Math.min(imgW, Math.max(imgW / MAX_ZOOM, w));
     return clamp({ w: cw, x: b.x + b.w / 2 - cw / 2, y: b.y + b.h / 2 - cw * aspect * clearMid });
   };

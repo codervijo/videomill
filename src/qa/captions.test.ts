@@ -33,6 +33,20 @@ test("any visible anchor under a caption is an issue, focus or not; so is leavin
   assert.match(out.problem, /outside the 9x16 safe zone/);
 });
 
+test("page text under a caption is an issue, even outside every anchor", () => {
+  const page: CaptureMeta = { ...meta, version: 3, anchors: {}, text: [{ text: "Tables", box: { x: 400, y: 1120, w: 200, h: 50 } }, { text: "Chairs", box: { x: 400, y: 600, w: 200, h: 50 } }] };
+  const [hit, ...rest] = captionIssues(tl("over"), { page }, { over: { x: 48, y: 1100, w: 840, h: 130 } });
+  assert.equal(hit.problem, "covers page text “Tables”");
+  assert.deepEqual(rest, []);
+});
+
+test("only page footage counts: a box under the caption strip is hidden", () => {
+  const card = { x: 0, y: 1000, w: 1080, h: 1000 };
+  assert.deepEqual(overlapOf({ x: 48, y: 1049, w: 840, h: 175 }, card, full, "9x16"), { x: 48, y: 1049, w: 840, h: 175 });
+  assert.equal(overlapOf({ x: 48, y: 1049, w: 840, h: 175 }, card, full, "9x16", 1025), null);
+  assert.deepEqual(overlapOf({ x: 48, y: 980, w: 840, h: 175 }, card, full, "9x16", 1025), { x: 48, y: 1000, w: 840, h: 25 }); // a caption grown above the strip
+});
+
 test("regression: export 20261020T233815Z (9:16) fails — “No minimum order.” sat on the Folding Chair card", () => {
   const fx: { timeline: Timeline; metas: Record<string, CaptureMeta>; boxes: Record<string, Rect> } =
     JSON.parse(readFileSync(new URL("./fixtures/export-20261020T233815Z-9x16.json", import.meta.url), "utf8"));

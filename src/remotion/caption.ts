@@ -19,6 +19,16 @@ export function captionBand(f: Format, width: number, height: number): { top: nu
   return { top: bottom - (2 * FONT[v] * LINE + 2 * PAD_Y), bottom };
 }
 
+const STRIP_GAP = 24; // page footage ends this far above the caption band
+
+/**
+ * Bottom of the page footage, in output px (v1.I): below it is a solid strip
+ * the captions sit in, so a caption never hides page content.
+ */
+export function pageBottom(f: Format, width: number, height: number): number {
+  return captionBand(f, width, height).top - STRIP_GAP;
+}
+
 /** Outer = positioned strip inside the safe zone; inner = the visible box. Lengths in px strings. */
 export function captionStyles(f: Format, width: number, height: number, fontFamily: string): { outer: Style; inner: Style } {
   const vertical = height > width;

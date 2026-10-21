@@ -60,3 +60,9 @@
 > start the fix phase — captions at bottom of safe zone
 
 > option 1 — add the call line, then export and commit
+
+> fix the Tables card caption bug
+
+> option 1
+
+> approve, then render, qa, export and commit

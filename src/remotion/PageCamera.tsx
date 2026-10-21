@@ -2,7 +2,7 @@
 // segments (src/render/camera.ts), with phrase captions + narration on top.
 import { AbsoluteFill, Audio, Easing, Img, interpolate, Sequence, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import type { Segment, View } from "../render/camera";
-import { captionStyles } from "./caption";
+import { captionBand, captionStyles, pageBottom } from "./caption";
 import { fontStack, useFonts, type FontRef } from "./fonts";
 
 /** One phrase on the scene timeline, in frames: [start, end). */
@@ -33,9 +33,14 @@ export const PageCamera: React.FC<PageCameraProps> = ({ image, imageWidth, segme
   const { width, height } = useVideoConfig();
   const v = viewAt(frame, segments);
   const scale = width / v.w;
+  const f = height > width ? "9x16" : "16x9";
+  const bottom = pageBottom(f, width, height); // the camera frames content above this
+  const fadeEnd = captionBand(f, width, height).top;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#ffffff", overflow: "hidden" }}>
+      {/* Page footage stops above the caption strip (v1.I), fading out in the gap between the camera's clear area and the captions. */}
+      <div style={{ position: "absolute", top: 0, left: 0, width, height: fadeEnd, overflow: "hidden" }}>
       <Img
         src={staticFile(image)}
         style={{
@@ -46,6 +51,8 @@ export const PageCamera: React.FC<PageCameraProps> = ({ image, imageWidth, segme
           transform: `translate(${-v.x * scale}px, ${-v.y * scale}px)`,
         }}
       />
+      <div style={{ position: "absolute", left: 0, width, top: bottom, height: fadeEnd - bottom, background: "linear-gradient(rgba(255,255,255,0), #ffffff)" }} />
+      </div>
       {phrases.map((p, i) => (
         <Sequence key={i} from={p.start} durationInFrames={p.end - p.start} layout="none">
           {p.caption && <Caption text={p.caption} vertical={height > width} font={font} />}
