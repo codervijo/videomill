@@ -1,0 +1,255 @@
+{
+  "source": "exports/lamillrentals-promo/20261020T233815Z (9x16): timeline-9x16.json, page-9x16.json anchors, caption boxes measured by measureCaptions()",
+  "timeline": {
+    "format": "9x16",
+    "fps": 30,
+    "font": {
+      "family": "system-ui",
+      "uppercase": false
+    },
+    "scenes": [
+      {
+        "id": "hero",
+        "capture": "page",
+        "offset": 45,
+        "segments": [
+          {
+            "start": 0,
+            "end": 128,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 0
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 0
+            }
+          },
+          {
+            "start": 128,
+            "end": 173,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 0
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 1971.2
+            },
+            "focus": "h2:has-text(\"Rental Categories\")"
+          }
+        ],
+        "phrases": [
+          {
+            "caption": "Party & event rentals in Salinas & Monterey",
+            "start": 0,
+            "end": 128
+          }
+        ]
+      },
+      {
+        "id": "categories",
+        "capture": "page",
+        "offset": 218,
+        "segments": [
+          {
+            "start": 0,
+            "end": 90,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 1971.2
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 1971.2
+            },
+            "focus": "h2:has-text(\"Rental Categories\")"
+          },
+          {
+            "start": 90,
+            "end": 135,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 1971.2
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 1863.5
+            },
+            "focus": ".shadow-md:has(h3:has-text(\"Chairs\"))"
+          },
+          {
+            "start": 135,
+            "end": 179,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 1863.5
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 1863.5
+            },
+            "focus": ".shadow-md:has(h3:has-text(\"Chairs\"))"
+          }
+        ],
+        "phrases": [
+          {
+            "caption": "Chairs, tables, tents & lighting",
+            "start": 0,
+            "end": 90
+          },
+          {
+            "caption": "Delivered across Monterey County",
+            "start": 90,
+            "end": 179
+          }
+        ]
+      },
+      {
+        "id": "featured",
+        "capture": "page",
+        "offset": 397,
+        "segments": [
+          {
+            "start": 0,
+            "end": 39,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 4171.2
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 4355.5
+            },
+            "focus": ".shadow-md:has(h3:has-text(\"Folding Chair - White\"))"
+          },
+          {
+            "start": 39,
+            "end": 62,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 4355.5
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 4355.5
+            },
+            "focus": ".shadow-md:has(h3:has-text(\"Folding Chair - White\"))"
+          },
+          {
+            "start": 62,
+            "end": 142,
+            "from": {
+              "w": 1080,
+              "x": 0,
+              "y": 5359.2
+            },
+            "to": {
+              "w": 1080,
+              "x": 0,
+              "y": 5359.2
+            },
+            "focus": ".shadow-md:has(h3:has-text(\"Chiavari Chair - Gold\"))"
+          }
+        ],
+        "phrases": [
+          {
+            "caption": "No minimum order.",
+            "start": 0,
+            "end": 62
+          },
+          {
+            "caption": "Get a quote · lamillrentals.com",
+            "start": 62,
+            "end": 142
+          }
+        ]
+      }
+    ]
+  },
+  "metas": {
+    "page": {
+      "version": 2,
+      "width": 1080,
+      "height": 17614,
+      "anchors": {
+        ".shadow-md:has(h3:has-text(\"Chairs\"))": {
+          "x": 32,
+          "y": 2344,
+          "w": 1016,
+          "h": 376
+        },
+        ".shadow-md:has(h3:has-text(\"Chiavari Chair - Gold\"))": {
+          "x": 32,
+          "y": 5436,
+          "w": 1016,
+          "h": 728
+        },
+        ".shadow-md:has(h3:has-text(\"Folding Chair - White\"))": {
+          "x": 32,
+          "y": 4660,
+          "w": 1016,
+          "h": 728
+        },
+        "h2:has-text(\"Featured Rental Items\")": {
+          "x": 32,
+          "y": 4248,
+          "w": 1016,
+          "h": 72
+        },
+        "h2:has-text(\"Rental Categories\")": {
+          "x": 32,
+          "y": 2048,
+          "w": 1016,
+          "h": 72
+        }
+      }
+    }
+  },
+  "boxes": {
+    "Party & event rentals in Salinas & Monterey": {
+      "x": 48,
+      "y": 1049,
+      "w": 840,
+      "h": 175
+    },
+    "Chairs, tables, tents & lighting": {
+      "x": 48,
+      "y": 1049,
+      "w": 840,
+      "h": 175
+    },
+    "Delivered across Monterey County": {
+      "x": 48,
+      "y": 1049,
+      "w": 840,
+      "h": 175
+    },
+    "No minimum order.": {
+      "x": 173.0625,
+      "y": 1116.5,
+      "w": 589.859375,
+      "h": 107.5
+    },
+    "Get a quote · lamillrentals.com": {
+      "x": 48,
+      "y": 1049,
+      "w": 840,
+      "h": 175
+    }
+  }
+}

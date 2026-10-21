@@ -12,6 +12,22 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.I — v1.H defect fixes (shipped 2026-10-20)
+
+- Defects seen in the shipped v1.H video (operator, 2026-10-20). Inserted before the benchmark; benchmark → v1.J, build-in-public → v1.K.
+  - **Parent opener opt-in:** no LaMill logo intro unless `brand.json` `parent.opener: true`; the end-card sign-off stays.
+  - **Silence ≤ 1 s between phrases:** `qa` runs ffmpeg `silencedetect` over the narration span; the hero's silent 1.5 s pan is shortened to 0.6 s. `qa` also caught Kokoro's ~0.4 s per-phrase padding (gaps of 1.02–1.68 s), fixed by trimming each phrase WAV (`trimSilence()`).
+  - **End card ~2 s:** `endCard.seconds` default 3 → 2.
+  - **"No minimum order"** zooms to the hero line that says it, not a product card.
+  - **9:16 captions:** stay at the bottom of Google's safe zone (operator, 2026-10-20); the camera frames subjects above the caption band.
+  - **`qa` caption overlap:** a caption box may not intersect any visible recorded anchor box (was: ≤ 10% of the shot's subject area, which passed a caption sitting 590×100 px on the Folding Chair card). Regression test on export `20261020T233815Z`'s real 9:16 geometry.
+  - **Duration (operator-set):** 9:16 15–30 s, 16:9 15–45 s, checked by `qa`.
+  - **Quote close** holds on the hero framing: zooming to the small "Get a Quote" button cropped the 16:9 hero line; the 9:16 Chiavari card is taller than the clear area above the caption band.
+  - **Duration shortfall:** trimming dead air took the video to 14.0 s. Operator added the hero's own line "Or call (831) 288-5751 to check a date." → 19.9 s.
+- **Real run 2026-10-20:** re-approved (hash `9a081ed42d207dc5`, operator-directed) → render → `qa` passed both formats (captions, −14.1 LUFS / TP −1.5, no gap > 1 s, 19.9 s, contact sheet) → export.
+- **Known gap:** `qa` only knows anchors the script names; the 9:16 categories hold puts its captions over the unnamed Tables card (`bugs.md`).
+- Tests: 21 total (caption overlap rewritten as 4, incl. the regression).
+
 ## v1.H — lamillrentals.com end to end; `qa` gates export (shipped 2026-10-20)
 
 - First complete video: every pipeline step runs on one real project and produces an export RankMill could consume. This is the end-to-end proof. `videomill qa <slug>` checks caption overlap (captions inside the safe zone and not over key content), integrated loudness (−14 LUFS within tolerance), and that a contact sheet was produced. `export` refuses unless `qa` passes. Pulled forward from the brief's P1 "Automated QA" row; the remaining P1 QA checks (text clipping, brand spelling, resolution/duration) stay in a later tier.

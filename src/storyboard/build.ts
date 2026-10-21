@@ -73,7 +73,7 @@ export function storyboardHtml(inp: StoryboardInput, htmlPath: string): string {
   }).join("");
 
   const cards = [
-    brand.parent && parent ? `<li><b>@intro</b> (${brand.parent.introSeconds}s, silent): ${esc(parent.name)} logo · ${esc(brand.parent.intro)} · ${esc(brand.name)}</li>` : "",
+    brand.parent?.opener && parent ? `<li><b>@intro</b> (${brand.parent.introSeconds}s, silent): ${esc(parent.name)} logo · ${esc(brand.parent.intro)} · ${esc(brand.name)}</li>` : "",
     brand.endCard ? `<li><b>@end-card</b>: ${esc(brand.name)} · <b>${esc(brand.endCard.headline)}</b> · ${esc(brand.endCard.url)}${brand.parent && parent ? ` · ${esc(brand.parent.signoff)} ${esc(parent.name)}` : ""}${brand.endCard.say ? ` · says “${esc(brand.endCard.say)}”` : ""}</li>` : "",
   ].join("");
   const pub = p.publish ? `<h2>publish</h2><ul><li><b>title</b>: ${esc(p.publish.title)}</li><li><b>description</b>: ${esc(p.publish.description)}</li><li><b>hashtags</b>: ${esc(p.publish.hashtags.join(" "))}</li><li><b>channels</b>: ${esc(p.publish.channels.join(", "))}</li></ul>` : "";

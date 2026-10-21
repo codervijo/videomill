@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import type { CaptureMeta } from "../record/site.js";
-import { captionIssues, coverOf, onScreen, safeRect, type Timeline } from "./captions.js";
+import { captionIssues, onScreen, overlapOf, safeRect, type Rect, type Timeline } from "./captions.js";
 
 const meta: CaptureMeta = { version: 2, width: 1080, height: 6000, anchors: { "#card": { x: 0, y: 1000, w: 1080, h: 1000 } } };
 const full = { x: 0, y: 0, w: 1080 }; // 9x16 view: 1080×1920 of the image at 1:1
@@ -11,24 +12,31 @@ test("anchor boxes map through the camera view into output px", () => {
   assert.deepEqual(safeRect("9x16"), { x: 48, y: 288, w: 840, h: 960 });
 });
 
-test("cover = share of the element's visible area under the caption", () => {
-  // Card on screen y 1000–1920 (clipped by the frame), caption y 1000–1100 full width.
-  const c = coverOf({ x: 0, y: 1000, w: 1080, h: 100 }, meta.anchors["#card"], full, "9x16");
-  assert.equal(c, 100 / 920);
-  assert.equal(coverOf({ x: 0, y: 0, w: 1080, h: 100 }, meta.anchors["#card"], full, "9x16"), 0);
+test("overlap = caption ∩ the anchor's visible box; sub-pixel touches don't count", () => {
+  assert.deepEqual(overlapOf({ x: 48, y: 1900, w: 840, h: 100 }, meta.anchors["#card"], full, "9x16"), { x: 48, y: 1900, w: 840, h: 20 }); // clipped at the frame
+  assert.equal(overlapOf({ x: 0, y: 0, w: 1080, h: 100 }, meta.anchors["#card"], full, "9x16"), null);
+  assert.equal(overlapOf({ x: 0, y: 999.5, w: 1080, h: 0.5 }, meta.anchors["#card"], full, "9x16"), null);
 });
 
-const tl = (caption: string, focus?: string): Timeline => ({
+const tl = (caption: string): Timeline => ({
   format: "9x16", fps: 30,
-  scenes: [{ id: "s", capture: "page", offset: 45, segments: [{ start: 0, end: 60, from: full, to: full, focus }], phrases: [{ caption, start: 15, end: 60 }] }],
+  scenes: [{ id: "s", capture: "page", offset: 45, segments: [{ start: 0, end: 60, from: full, to: full }], phrases: [{ caption, start: 15, end: 60 }] }],
 });
 
-test("captions over the shot's subject or outside the safe zone are issues", () => {
-  const inside = { x: 48, y: 1000, w: 840, h: 240 }; // 20% of the card's visible 1080×920
-  assert.deepEqual(captionIssues(tl("ok"), { page: meta }, { ok: inside }), []); // no focus → only the zone check
-  const [over] = captionIssues(tl("over", "#card"), { page: meta }, { over: inside });
+test("any visible anchor under a caption is an issue, focus or not; so is leaving the safe zone", () => {
+  const [over] = captionIssues(tl("over"), { page: meta }, { over: { x: 48, y: 1100, w: 840, h: 130 } });
   assert.equal(over.at, 2); // (45 + 15) / 30
-  assert.equal(over.problem, "covers 20% of #card (max 10%)");
-  const [out] = captionIssues(tl("tall"), { page: meta }, { tall: { x: 100, y: 200, w: 700, h: 400 } });
+  assert.equal(over.problem, "overlaps #card (840×130 px)");
+  const clear = { page: { ...meta, anchors: { "#card": { x: 0, y: 100, w: 1080, h: 300 } } } };
+  assert.deepEqual(captionIssues(tl("ok"), clear, { ok: { x: 48, y: 1100, w: 840, h: 130 } }), []);
+  const [out] = captionIssues(tl("tall"), clear, { tall: { x: 100, y: 200, w: 700, h: 400 } });
   assert.match(out.problem, /outside the 9x16 safe zone/);
+});
+
+test("regression: export 20261020T233815Z (9:16) fails — “No minimum order.” sat on the Folding Chair card", () => {
+  const fx: { timeline: Timeline; metas: Record<string, CaptureMeta>; boxes: Record<string, Rect> } =
+    JSON.parse(readFileSync(new URL("./fixtures/export-20261020T233815Z-9x16.json", import.meta.url), "utf8"));
+  const issues = captionIssues(fx.timeline, fx.metas, fx.boxes);
+  const hit = issues.find((i) => i.caption === "No minimum order." && i.problem.includes("Folding Chair - White"));
+  assert.ok(hit, `expected the Folding Chair overlap, got ${JSON.stringify(issues)}`);
 });

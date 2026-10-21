@@ -1,7 +1,7 @@
 // `record` and `render` — the per-scene pipeline (docs/architecture.md § 2).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { CAPTURE, DEFAULT_VOICE, FPS, LOUDNESS, type Format } from "../constants.js";
+import { CAPTURE, DEFAULT_VOICE, FPS, LOUDNESS, QA, type Format } from "../constants.js";
 import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
 import { loadBrand } from "../brand/schema.js";
 import { requireApproved } from "./approve.js";
@@ -13,7 +13,7 @@ import { anchorsFor, approvalHash, type Project } from "../project/schema.js";
 import type { Timeline } from "../qa/captions.js";
 import { captureFiles, recordCapture, type CaptureMeta } from "../record/site.js";
 import { planCamera } from "../render/camera.js";
-import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, writeSrt, type Clip } from "../render/render.js";
+import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
 import { phrasesOf, timeScene } from "../render/timeline.js";
 import { getTtsProvider, type TtsProvider } from "../tts/provider.js";
 
@@ -74,12 +74,13 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
   // Narration per phrase, cached by text + voice so editing one phrase re-voices only that phrase.
   let tts: TtsProvider | undefined;
   const voiced = async (name: string, text: string, force: boolean) => {
-    const key = hashOf({ text, voice, provider: "kokoro" });
+    const key = hashOf({ text, voice, provider: "kokoro", trim: QA.silenceFloorDb });
     const file = `tts/${key}.wav`;
     await step(stamps, name, key, [join(media, file)], async () => {
       tts ??= await getTtsProvider("kokoro");
       const t0 = performance.now();
       const r = await tts.synthesize(text, voice, join(media, file));
+      trimSilence(join(media, file), QA.silenceFloorDb);
       info(`${r.durationSec.toFixed(2)}s audio in ${((performance.now() - t0) / 1000).toFixed(2)}s — "${text}"`);
     }, force);
     return { file, sec: probeDurationSec(join(media, file)) };
@@ -110,7 +111,7 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
       offset += props.durationInFrames / FPS;
       frames += props.durationInFrames;
     };
-    if (brand.parent && parent) {
+    if (brand.parent?.opener && parent) {
       await card("@intro", {
         variant: "intro", brand: cardBrand(parent), intro: brand.parent.intro, subject: brand.name,
         durationInFrames: Math.round(brand.parent.introSeconds * FPS),

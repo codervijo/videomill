@@ -25,8 +25,9 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | v1.F | ✅ | Brand profiles — LaMill presents its sites; CTA end-card |
 | v1.G | ✅ | Script/storyboard draft + approval gate |
 | v1.H | ✅ | lamillrentals.com end to end — `qa` gates export |
-| v1.I | 🚧 | Benchmark: extension popup + Fiverr repro |
-| v1.J | ⏳ | First build-in-public video |
+| v1.I | ✅ | v1.H defect fixes — opener opt-in, silence/duration qa, 2 s end card, captions vs anchors |
+| v1.J | ⏳ | Benchmark: extension popup + Fiverr repro |
+| v1.K | ⏳ | First build-in-public video |
 
 ## Versioning convention
 

@@ -56,3 +56,7 @@
 > still waiting on fiverr video. we could pause now
 
 > commit the prompt log
+
+> start the fix phase — captions at bottom of safe zone
+
+> option 1 — add the call line, then export and commit

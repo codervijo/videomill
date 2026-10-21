@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.H shipped (2026-10-20); v1.I in progress. Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.I shipped (2026-10-20); v1.J (extension benchmark) blocked on the Fiverr reference video. Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.H: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.I–v1.J):
+Built through v1.H: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.J–v1.K):
 
 ```
 videomill/
@@ -41,7 +41,7 @@ Rules:
 - Steps are keyed by content hash (`out/<slug>/stamps.json`). **Built in v1.C:**
   - `record <capture> <format>`: keyed by URL, anchors and capture settings.
   - `brand <id>` *(v1.F)*: keyed by a hash of `brands/<id>/`; stages it into `media/brand/<id>/` (Remotion publicDir).
-  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`.
+  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`. *(v1.I)* Leading/trailing silence below −50 dB is trimmed to 50 ms (`trimSilence()`): Kokoro pads each phrase with about 0.4 s, which stacked into > 1 s gaps.
   - `render <scene> <format>`: keyed by props, the capture stamp and `compositionHash()`.
   - `render @intro|@end-card <format>` *(v1.F)*: brand cards, keyed by props + brand hashes + `compositionHash()`.
   - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat (video stream-copied, audio re-encoded) to `scenes/joined-<format>.mp4`.
@@ -63,7 +63,7 @@ Rules:
 - **Anchors (v1.C):** every scene `from`/`to` that isn't `"top"` is a Playwright selector. At record time each one is resolved to a device-pixel y offset per format and written to `media/<capture>-<format>.json`. A missing anchor fails the record step with `✗`. Framing per format therefore comes from the real layout: the same heading sits at y=1144 on desktop and y=2048 on mobile.
 - The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
 - The scene (`src/remotion/PageCamera.tsx`) moves a virtual camera over that PNG along segments planned from the scene's shots (next section). Phrase captions and narration play on top (§ Phrases and captions).
-- **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.I).
+- **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.J).
 
 ### Camera and shots (v1.D)
 
@@ -94,7 +94,7 @@ Rules:
 
 ### Brands and cards (v1.F)
 
-- **LaMill presents its sites.** A site brand's `parent` (here `lamill`) adds a silent opener in the parent's look before scene 1 (parent logo, `parent.intro`, site name) and a sign-off under the site's end-card CTA (`parent.signoff` + parent logo). Assembled order: `@intro` → scenes → `@end-card`.
+- **LaMill presents its sites.** A site brand's `parent` (here `lamill`) adds a sign-off under the site's end-card CTA (`parent.signoff` + parent logo), and *only with `parent.opener: true`* (v1.I; default off) a silent opener in the parent's look before scene 1 (parent logo, `parent.intro`, site name). Assembled order: [`@intro`] → scenes → `@end-card`.
 - `src/brand/schema.ts`: `loadBrand()` (typed errors per field path; id must equal the folder; every asset must exist), `isDark()`.
 - `src/brand/cards.ts`: `brandHash()`, `stageBrand()`, `cardBrand(brand, background)` (resolves publicDir paths, picks the logo variant for the background), `textFont()`.
 - `src/remotion/BrandCard.tsx`: `intro` / `end` variants inside `SAFE_ZONE`, spring-in, and the opener fades out. `src/remotion/fonts.ts` `useFonts()` registers brand font files via `FontFace` and holds the frame with `delayRender`. Captions use the brand text font.
@@ -111,15 +111,17 @@ Rules:
 ### QA and export (v1.H)
 
 - **`qa <slug>`** (`src/cli/qa.ts`) refuses unless approved and each format's outputs are `rendered` from the current approval hash. Per format:
-  - **captions** (`src/qa/captions.ts`): each caption is laid out in Playwright Chromium with the render's own styles (`captionStyles()`, shared with `PageCamera`) and brand font, so the measured box is the rendered box. ✗ if the box leaves the safe zone, or covers more than `QA.maxCaptionCover` (10%) of the visible area of a `focus` element in any overlapping segment's start or end view.
+  - **captions** (`src/qa/captions.ts`): each caption is laid out in Playwright Chromium with the render's own styles (`captionStyles()`, shared with `PageCamera`) and brand font, so the measured box is the rendered box. ✗ if the box leaves the safe zone, or *(v1.I)* intersects (≥ 1 px each way) the visible box of **any** recorded anchor in any overlapping segment's start or end view. v1.H's rule (≤ 10% of the `focus` element's area) passed a caption sitting 590×100 px on the Folding Chair card; `captions.test.ts` replays that export (`src/qa/fixtures/export-20261020T233815Z-9x16.json`) as a regression.
+  - **silence** *(v1.I)*: ffmpeg `silencedetect` (`QA.silenceFloorDb` −50 dB) over the narration span (first phrase start → last phrase end); ✗ on any gap over `QA.maxSilenceSec` (1 s).
+  - **duration** *(v1.I)*: within `QA.durationSec` (9x16 15–30 s, 16x9 15–45 s; operator-set).
   - **loudness:** integrated within ±`QA.lufsTolerance` (1 LU) of −14 LUFS and true peak ≤ `QA.maxTruePeak` (−1 dBTP).
   - **contact sheet** exists.
-  - Thresholds in `QA` are VideoMill defaults chosen in v1.H, not platform specs.
+  - Loudness thresholds are VideoMill defaults chosen in v1.H, not platform specs; silence and duration are operator-set (v1.I).
 - **`export <slug>`** (`src/cli/export.ts`, `src/export/manifest.ts`) refuses unless approved, every format's `qa` stamp matches the current outputs, and `publish` is set. It copies `video-<f>.mp4` and one `captions.srt` (cue timings are format-independent; it refuses if the formats' SRTs differ) into `exports/<slug>/.tmp-<ts>`, writes `manifest.json`, renames to `<ts>` (UTC, `20261020T232529Z`) and repoints the relative `latest` symlink. `videomillCommit` = `git rev-parse HEAD`; a dirty tree prints `↷`.
 
-### Extension popup recording (v1.I — riskiest piece, benchmark test)
+### Extension popup recording (v1.J — riskiest piece, benchmark test)
 
-Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.I.
+Playwright launches Chromium with a persistent context and the unpacked extension (`--load-extension`, `--disable-extensions-except`). The toolbar action popup itself is not scriptable, so the popup is captured by opening `chrome-extension://<id>/<popup>.html` in a page sized to popup dimensions, with Playwright video recording on. Extensions need headed (or new-headless) Chromium; the container provides Xvfb. Proven or disproven in v1.J.
 
 ## 3. Data shapes / schemas
 
@@ -202,8 +204,8 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `colors` | `{ primary, onPrimary, background, text, muted }`, `#rrggbb`; `primary` = CTA |
 | `fonts` | `{ text, cta? }`, each `{ family, file?, uppercase=false }`; no `file` = system sans |
 | `voice?` | TTS voice when the project sets none |
-| `endCard?` | `{ headline, url, seconds=3, say? }`, appended after the last scene |
-| `parent?` | `{ brand, intro="Introducing", introSeconds=1.5, signoff="Part of" }`, the brand that presents this one (opener + end-card sign-off) |
+| `endCard?` | `{ headline, url, seconds=2, say? }`, appended after the last scene (default 3 → 2 in v1.I) |
+| `parent?` | `{ brand, opener=false, intro="Introducing", introSeconds=1.5, signoff="Part of" }`, the brand that presents this one: end-card sign-off, plus the opener when `opener` *(added v1.I)* |
 
 ## 4. Modules
 
@@ -225,7 +227,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/cli/index.ts` | arg parsing + dispatch |
 | `src/cli/new.ts` | `new`: scaffolds a valid `project.json` with one empty scene |
 | `src/cli/approve.ts` | `storyboard`, `approve`, `requireApproved()` (render gate) |
-| `src/qa/captions.ts` | `Timeline` type, caption box measurement (Playwright), `captionIssues()` (safe zone + subject cover); tests in `captions.test.ts` |
+| `src/qa/captions.ts` | `Timeline` type, caption box measurement (Playwright), `captionIssues()` (safe zone + any visible anchor); tests + regression fixture in `captions.test.ts` / `fixtures/` |
 | `src/export/manifest.ts` | `buildManifest()` (`videomill-export-v1`); tests in `manifest.test.ts` |
 | `src/cli/qa.ts` | `qa`, `qaInputs()`, `requireRendered()` |
 | `src/cli/export.ts` | `export`: gates, atomic folder write, `latest` symlink |
@@ -281,11 +283,11 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-v1.H shipped (see `shipping-history.md`). v1.I (extension benchmark) is blocked on the Fiverr reference video + its extension (`prd.md § 7`).
+None in progress. v1.J (extension benchmark) is blocked on the Fiverr reference video + its extension (`prd.md § 7`).
 
 ## 9. Risks
 
-- **Extension popup capture** (§ 2, v1.I) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
+- **Extension popup capture** (§ 2, v1.J) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
 - **`qa` caption geometry is measured, not captured.** Boxes come from Playwright Chromium with the render's styles; Remotion renders with its own Chrome Headless Shell, so glyph metrics can differ by a pixel or so. The cover check samples each overlapping segment's start and end view, not every frame of a move.
 - **Kokoro on CPU** — measured in v1.E at roughly real time per phrase in the container (1.8 s audio in 2.0 s; 2.4 s in 1.4 s). Voice quality vs. the Fiverr benchmark is still unjudged. Mitigation: provider interface (ADR-0004).
 - **No word timestamps** from kokoro-js → captions are segment-timed (ADR-0004).

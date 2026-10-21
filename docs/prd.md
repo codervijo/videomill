@@ -83,12 +83,13 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 | v1.F | ✅ done 2026-10-20 | Brand profiles — LaMill presents its sites (opener + sign-off), lamillrentals.com, CTA end-card per brand |
 | v1.G | ✅ done 2026-10-20 | Script/storyboard draft + approval gate |
 | v1.H | ✅ done 2026-10-20 | lamillrentals.com end to end — `qa` command (caption overlap, loudness, contact sheet) gates `manifest.json` export (`videomill-export-v1`) |
-| v1.I | 🚧 in progress | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
-| v1.J | ⏳ planned | First lamill.io build-in-public video |
+| v1.I | ✅ done 2026-10-20 | v1.H defect fixes — parent opener off by default, ≤1 s silence between phrases, ~2 s end card, 9:16 captions at the bottom of the safe zone with content framed above, `qa` caption boxes vs visible anchor boxes, duration targets |
+| v1.J | ⏳ planned | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
+| v1.K | ⏳ planned | First lamill.io build-in-public video |
 
 #### Design notes
 
-- **v1.I** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
+- **v1.J** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
 
 ## 6. Conformance rules
 
@@ -99,7 +100,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 ## 7. Open questions
 
-- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.I (benchmark). Where do they live? Video is a large binary — keep outside git (e.g. `.cache/reference/`) or a known host path?
+- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.J (benchmark). **Partly answered 2026-10-20:** the video is mounted from a host path to `.cache/reference/` (outside git); reproduce the same extension with the same script beats as the Fiverr video. **Still open:** the host path of the video and the extension's location (unpacked path or repo) — the operator is still waiting on the video.
 
 Resolved in v1.A (2026-10-20): CLI language → all TypeScript (ADR-0002); container recipe → new builder `video` stack (ADR-0003); TTS → Kokoro behind a provider interface (ADR-0004); export contract → `videomill-export-v1` (ADR-0005); v1 channels → YouTube + X only, TikTok deferred to v2 or later.
 

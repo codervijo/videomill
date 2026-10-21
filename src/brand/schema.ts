@@ -32,14 +32,15 @@ export const Brand = z.object({
   endCard: z.object({
     headline: z.string().min(1), // the CTA, in the site's own words
     url: z.string().min(1), // shown as-is, e.g. "lamillrentals.com"
-    seconds: z.number().positive().default(3),
+    seconds: z.number().positive().default(2), // ~2 s (operator, v1.I; was 3)
     say: z.string().min(1).optional(), // spoken over the card
   }).strict().optional(),
-  // Parent brand that presents this one: a silent opener in the parent's look
-  // (parent logo + `intro`, then the site), and `signoff` + parent logo under
-  // this brand's end-card CTA.
+  // Parent brand that presents this one: `signoff` + parent logo under this
+  // brand's end-card CTA, and — only with `opener: true` (v1.I; off by default)
+  // — a silent opener in the parent's look (parent logo + `intro`, then the site).
   parent: z.object({
     brand: id,
+    opener: z.boolean().default(false),
     intro: z.string().min(1).default("Introducing"),
     introSeconds: z.number().positive().default(1.5),
     signoff: z.string().min(1).default("Part of"),

@@ -1,10 +1,10 @@
-// Caption QA (v1.H): every caption box sits inside the format's safe zone and
-// doesn't cover the element its shot is about. Caption boxes are measured in
-// Chromium with the render's own styles (remotion/caption.ts); the element's
-// on-screen box comes from the recorded anchor box through the camera view.
+// Caption QA: every caption box sits inside the format's safe zone (v1.H) and
+// intersects no visible recorded anchor box (v1.I). Caption boxes are measured
+// in Chromium with the render's own styles (remotion/caption.ts); anchors' on-
+// screen boxes come from the recorded boxes through the camera view.
 import { readFileSync } from "node:fs";
 import { chromium } from "playwright";
-import { FORMATS, QA, SAFE_ZONE, type Format } from "../constants.js";
+import { FORMATS, SAFE_ZONE, type Format } from "../constants.js";
 import type { CaptureMeta } from "../record/site.js";
 import type { Segment, View } from "../render/camera.js";
 import { captionStyles } from "../remotion/caption.js";
@@ -39,11 +39,11 @@ export function safeRect(f: Format): Rect {
   return { x: z.left, y: z.top, w: width - z.left - z.right, h: height - z.top - z.bottom };
 }
 
-/** Share of the focus element's visible area that the caption covers, 0–1. */
-export function coverOf(caption: Rect, box: Rect, view: View, f: Format): number {
+/** Where the caption overlaps the anchor's visible box through `view`, or null. */
+export function overlapOf(caption: Rect, box: Rect, view: View, f: Format): Rect | null {
   const frame = { x: 0, y: 0, w: FORMATS[f].width, h: FORMATS[f].height };
-  const visible = intersect(onScreen(box, view, f), frame);
-  return area(visible) === 0 ? 0 : area(intersect(caption, visible)) / area(visible);
+  const o = intersect(caption, intersect(onScreen(box, view, f), frame));
+  return o.w >= 1 && o.h >= 1 ? o : null; // sub-pixel touches are rounding, not overlap
 }
 
 /** Pure check over a laid-out timeline, given measured caption boxes per text. */
@@ -59,16 +59,13 @@ export function captionIssues(t: Timeline, metas: Record<string, CaptureMeta>, b
       const issue = (problem: string) => issues.push({ scene: s.id, caption: ph.caption, at, problem });
       const outside = area(box) - area(intersect(box, zone));
       if (outside > 1) issue(`outside the ${t.format} safe zone (box y ${Math.round(box.y)}–${Math.round(box.y + box.h)}, zone ${zone.y}–${zone.y + zone.h})`);
-      let worst = { cover: 0, focus: "" };
-      for (const seg of s.segments.filter((g) => g.focus && g.start < ph.end && g.end > ph.start)) {
-        const anchor = meta.anchors[seg.focus!];
-        if (!anchor) continue;
-        for (const v of [seg.from, seg.to]) {
-          const c = coverOf(box, anchor, v, t.format);
-          if (c > worst.cover) worst = { cover: c, focus: seg.focus! };
-        }
+      // Every view the phrase is shown over: each overlapping segment's start and end.
+      const views = s.segments.filter((g) => g.start < ph.end && g.end > ph.start).flatMap((g) => [g.from, g.to]);
+      for (const [name, anchor] of Object.entries(meta.anchors)) {
+        const worst = views.map((v) => overlapOf(box, anchor, v, t.format)).filter((o) => o !== null)
+          .sort((a, b) => area(b) - area(a))[0];
+        if (worst) issue(`overlaps ${name} (${Math.round(worst.w)}×${Math.round(worst.h)} px)`);
       }
-      if (worst.cover > QA.maxCaptionCover) issue(`covers ${Math.round(worst.cover * 100)}% of ${worst.focus} (max ${QA.maxCaptionCover * 100}%)`);
     }
   }
   return issues;

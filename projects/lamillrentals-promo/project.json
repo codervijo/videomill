@@ -13,8 +13,8 @@
   "voice": "af_heart",
   "approval": {
     "status": "approved",
-    "approvedAt": "2026-10-20T23:28:31.667Z",
-    "hash": "e04c88abf9557bd0"
+    "approvedAt": "2026-10-21T03:02:58.013Z",
+    "hash": "9a081ed42d207dc5"
   },
   "captures": [
     {
@@ -40,7 +40,7 @@
         },
         {
           "kind": "pan",
-          "seconds": 1.5,
+          "seconds": 0.6,
           "to": "h2:has-text(\"Rental Categories\")"
         }
       ]
@@ -71,11 +71,11 @@
       ]
     },
     {
-      "id": "featured",
+      "id": "quote",
       "kind": "page-scroll",
       "capture": "page",
-      "from": "h2:has-text(\"Featured Rental Items\")",
-      "screens": 0.5,
+      "from": "top",
+      "screens": 1,
       "narration": "",
       "caption": "",
       "minSeconds": 3,
@@ -83,18 +83,19 @@
         {
           "kind": "zoom",
           "seconds": 1.3,
-          "target": ".shadow-md:has(h3:has-text(\"Folding Chair - White\"))",
+          "target": "section:has(h1) p:has-text(\"No minimum order\")",
           "fill": 0.85,
           "say": "No minimum order."
-        },
-        {
-          "kind": "cut",
-          "to": ".shadow-md:has(h3:has-text(\"Chiavari Chair - Gold\"))"
         },
         {
           "kind": "hold",
           "say": "Get a quote at lamillrentals.com.",
           "caption": "Get a quote · lamillrentals.com"
+        },
+        {
+          "kind": "hold",
+          "say": "Or call (831) 288-5751 to check a date.",
+          "caption": "Or call (831) 288-5751"
         }
       ]
     }

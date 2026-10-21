@@ -1,5 +1,6 @@
 // `qa` — checks the rendered outputs before `export` (v1.H): captions in the
-// safe zone and off the shot's subject, loudness on target, contact sheet current.
+// safe zone and off every visible anchor, loudness on target, contact sheet
+// present; silence between phrases and duration (v1.I).
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { LOUDNESS, QA, type Format } from "../constants.js";
@@ -8,10 +9,10 @@ import { loadProject, projectDir } from "../project/load.js";
 import { approvalHash, type Project } from "../project/schema.js";
 import { captionIssues, measureCaptions, type Timeline } from "../qa/captions.js";
 import { captureFiles, type CaptureMeta } from "../record/site.js";
-import { measureLoudness } from "../render/render.js";
+import { measureLoudness, probeDurationSec, silences } from "../render/render.js";
 import { requireApproved } from "./approve.js";
 
-const QA_VERSION = 1; // bump when a check changes, so passed results re-run
+const QA_VERSION = 2; // bump when a check changes, so passed results re-run
 
 export const qaFiles = (slug: string, f: Format) => {
   const out = resolve("out", slug);
@@ -46,11 +47,20 @@ async function checkFormat(p: Project, f: Format): Promise<Check[]> {
   const boxes = await measureCaptions(f, texts, t.font, t.font?.file && join(media, t.font.file));
   const issues = captionIssues(t, metas, boxes);
   const loud = measureLoudness(files.video);
+  // Narration span: first phrase start → last phrase end, in seconds of the assembled video.
+  const starts = t.scenes.flatMap((s) => s.phrases.map((ph) => (s.offset + ph.start) / t.fps));
+  const ends = t.scenes.flatMap((s) => s.phrases.map((ph) => (s.offset + ph.end) / t.fps));
+  const span = { start: Math.min(...starts), end: Math.max(...ends) };
+  const gaps = silences(files.video, QA.silenceFloorDb, QA.maxSilenceSec)
+    .map((g) => ({ start: Math.max(g.start, span.start), end: Math.min(g.end, span.end) }))
+    .filter((g) => g.end - g.start > QA.maxSilenceSec);
+  const dur = probeDurationSec(files.video);
+  const [lo, hi] = QA.durationSec[f];
   return [
     {
       name: "captions",
       ok: issues.length === 0,
-      detail: issues.length === 0 ? `${texts.length} caption(s) inside the safe zone, none over the shot's subject`
+      detail: issues.length === 0 ? `${texts.length} caption(s) inside the safe zone, none over a visible anchor`
         : issues.map((x) => `${x.scene} @${x.at.toFixed(1)}s “${x.caption}”: ${x.problem}`).join("\n"),
     },
     {
@@ -58,6 +68,13 @@ async function checkFormat(p: Project, f: Format): Promise<Check[]> {
       ok: Math.abs(loud.i - LOUDNESS.I) <= QA.lufsTolerance && loud.tp <= QA.maxTruePeak,
       detail: `${loud.i.toFixed(1)} LUFS (target ${LOUDNESS.I} ±${QA.lufsTolerance}), true peak ${loud.tp.toFixed(1)} dBTP (max ${QA.maxTruePeak})`,
     },
+    {
+      name: "silence",
+      ok: gaps.length === 0,
+      detail: gaps.length === 0 ? `no gap over ${QA.maxSilenceSec}s between phrases (${span.start.toFixed(1)}–${span.end.toFixed(1)}s)`
+        : gaps.map((g) => `${(g.end - g.start).toFixed(2)}s silent at ${g.start.toFixed(1)}–${g.end.toFixed(1)}s (max ${QA.maxSilenceSec}s)`).join("\n"),
+    },
+    { name: "duration", ok: dur >= lo && dur <= hi, detail: `${dur.toFixed(1)}s (target ${lo}–${hi}s for ${f})` },
     { name: "contact sheet", ok: existsSync(files.sheet), detail: `out/${p.slug}/${p.slug}-${f}-contact.png` },
   ];
 }

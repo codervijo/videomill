@@ -36,11 +36,16 @@ export const SAFE_ZONE: Record<Format, { top: number; right: number; bottom: num
 // Loudness target for the assembled track (operator-set in prd.md v1.E); two-pass loudnorm.
 export const LOUDNESS = { I: -14, TP: -1.5, LRA: 11 } as const;
 
-// `qa` pass thresholds (v1.H). VideoMill defaults chosen in v1.H, not platform
-// specs — tune here. Loudness: integrated within ±lufsTolerance of LOUDNESS.I,
-// true peak at or below maxTruePeak. Captions: may cover at most this share of
-// the element the shot is about (zoom target / pan, cut or hold anchor).
-export const QA = { lufsTolerance: 1, maxTruePeak: -1, maxCaptionCover: 0.1 } as const;
+// `qa` pass thresholds. Loudness tolerance / true peak: VideoMill defaults
+// chosen in v1.H, not platform specs. Silence and duration: operator-set in
+// prd.md v1.I. Captions may not intersect any visible recorded anchor (v1.I).
+export const QA = {
+  lufsTolerance: 1,
+  maxTruePeak: -1,
+  maxSilenceSec: 1, // between the first and last phrase
+  silenceFloorDb: -50, // quieter than this counts as silence (ffmpeg silencedetect)
+  durationSec: { "16x9": [15, 45], "9x16": [15, 30] } as Record<Format, readonly [number, number]>,
+} as const;
 
 // Caption / SRT language; Kokoro voices used so far are English (ADR-0004).
 export const CAPTION_LANG = "en";

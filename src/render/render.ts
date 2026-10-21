@@ -1,6 +1,6 @@
 // Remotion bundle + render; ffmpeg concat, loudness, SRT and contact sheet.
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
@@ -128,6 +128,32 @@ export function writeSrt(cues: { start: number; end: number; text: string }[], o
   };
   mkdirSync(dirname(outPath), { recursive: true });
   writeFileSync(outPath, cues.map((c, i) => `${i + 1}\n${ts(c.start)} --> ${ts(c.end)}\n${c.text}\n`).join("\n"));
+}
+
+/**
+ * Trim leading/trailing silence from a TTS phrase in place, keeping `keepSec`
+ * at each end. Kokoro pads each phrase with ~0.4 s, which stacked into >1 s
+ * gaps between phrases (v1.I qa).
+ */
+export function trimSilence(path: string, floorDb: number, keepSec = 0.05): void {
+  const tmp = `${path}.trim.wav`;
+  const cut = `silenceremove=start_periods=1:start_threshold=${floorDb}dB:start_silence=${keepSec}`;
+  execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-i", path, "-af", `${cut},areverse,${cut},areverse`, tmp]);
+  renameSync(tmp, path);
+}
+
+/** Silent stretches of at least `minSec` below `floorDb`, in seconds (ffmpeg silencedetect). */
+export function silences(path: string, floorDb: number, minSec: number): { start: number; end: number }[] {
+  const r = spawnSync("ffmpeg", ["-hide_banner", "-nostats", "-i", path, "-af", `silencedetect=noise=${floorDb}dB:d=${minSec}`, "-vn", "-f", "null", "-"], { encoding: "utf8" });
+  if (r.status !== 0) throw new VideoMillError(`silencedetect failed on ${path}: ${r.stderr.trim().split("\n").at(-1)}`);
+  const out: { start: number; end: number }[] = [];
+  for (const line of r.stderr.split("\n")) {
+    const s = line.match(/silence_start: (-?[\d.]+)/);
+    if (s) out.push({ start: Math.max(0, parseFloat(s[1])), end: Infinity }); // a silence running to EOF has no end line
+    const e = line.match(/silence_end: ([\d.]+)/);
+    if (e && out.length) out[out.length - 1].end = parseFloat(e[1]);
+  }
+  return out;
 }
 
 export function probeDurationSec(path: string): number {
