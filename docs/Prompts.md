@@ -66,3 +66,5 @@
 > option 1
 
 > approve, then render, qa, export and commit
+
+> commit the prompt log
