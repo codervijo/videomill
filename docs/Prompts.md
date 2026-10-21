@@ -68,3 +68,9 @@
 > approve, then render, qa, export and commit
 
 > commit the prompt log
+
+> show me the feature table
+
+> make this our origin git@github.com:codervijo/videomill.git and push changes so far
+
+> commit the prompt log and push
