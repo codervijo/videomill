@@ -74,3 +74,7 @@
 > make this our origin git@github.com:codervijo/videomill.git and push changes so far
 
 > commit the prompt log and push
+
+> generated video shoulsn't be pushed
+
+> commit the prompt log and push
