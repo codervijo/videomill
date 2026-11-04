@@ -78,3 +78,11 @@
 > generated video shoulsn't be pushed
 
 > commit the prompt log and push
+
+> https://www.youtube.com/watch?v=h2GWC_BamQQ
+
+> yes, download it to .cache/reference
+
+> pwd
+
+> commit the prompt log and push
