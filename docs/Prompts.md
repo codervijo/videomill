@@ -106,3 +106,5 @@
 > give me a very short prompt for agent to fix it in tabmill templates and rebuild the extension
 
 > commit the prompt log and push - ignore tabmill's area of work and you focus on your side.
+
+> commit the prompt log and push
