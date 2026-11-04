@@ -23,12 +23,16 @@ const ExtensionOutput = z.object({
 
 export const Capture = z.object({
   id,
-  url: z.string().url(),
+  url: z.string().url().optional(),
+  // v1.L: or a file in this repo, e.g. "out/<slug>/storyboard.html" or an image such as a contact sheet.
+  file: z.string().regex(/^(?!\/)(?!.*\.\.)/, "a path inside this repo, e.g. out/<slug>/storyboard.html").optional(),
   extension: z.object({
     name: id, // .cache/ext-src/<name>, copied in by `make ext-copy`
     outputs: z.array(ExtensionOutput).default([]),
   }).strict().optional(),
-}).strict();
+}).strict()
+  .refine((c) => !!c.url !== !!c.file, { message: "a capture needs exactly one of `url` or `file`", path: ["url"] })
+  .refine((c) => !(c.extension && !c.url), { message: "an `extension` capture needs a `url` (the page it acts on)", path: ["extension"] });
 
 // Shot primitives (v1.D). A scene's camera starts at `from`; each shot moves it.
 // hold/pan/zoom take time; cut is instant. `at` on hold also cuts first.
@@ -94,7 +98,17 @@ export const BadgesScene = z.object({
   kind: z.literal("badges"),
   items: z.array(z.object({ icon: z.enum(BADGE_ICONS), label: z.string().min(1) }).strict()).min(1).max(4),
 }).strict();
-export const AnyScene = z.union([Scene, TitleScene, BadgesScene]);
+// v1.L: a span of another project's export, muted under this scene's narration.
+// Pinned to an export folder (not `latest`) so the approved script plays exactly that footage.
+export const ClipScene = z.object({
+  ...card,
+  kind: z.literal("clip"),
+  project: id, // exports/<project>/<export>/video-<format>.mp4
+  export: z.string().regex(/^\d{8}T\d{6}Z$/, "an export folder name, e.g. 20261104T055117Z"),
+  format: z.enum(FORMAT_IDS).optional(), // which of its videos; default: the one in the format being rendered
+  from: z.number().min(0).default(0), // seconds into the clip
+}).strict();
+export const AnyScene = z.union([Scene, TitleScene, BadgesScene, ClipScene]);
 
 export const Project = z.object({
   schema: z.literal(PROJECT_SCHEMA),
@@ -143,7 +157,7 @@ export const Project = z.object({
 
 export type Project = z.infer<typeof Project>;
 export type Scene = z.infer<typeof Scene>; // a page scene (camera over footage)
-export type CardScene = z.infer<typeof TitleScene> | z.infer<typeof BadgesScene>;
+export type CardScene = z.infer<typeof TitleScene> | z.infer<typeof BadgesScene> | z.infer<typeof ClipScene>;
 export type AnyScene = Scene | CardScene;
 export const isPageScene = (s: AnyScene): s is Scene => s.kind === "page-scroll";
 export type Capture = z.infer<typeof Capture>;

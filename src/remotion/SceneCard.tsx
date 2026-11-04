@@ -1,7 +1,7 @@
 // Card scenes (v1.J) on the brand background: `title` types a headline,
-// `badges` shows a row of icon + label tiles. Content stays in the clear area
+// `badges` shows a row of icon + label tiles, `clip` (v1.L) plays another VideoMill video. Content stays in the clear area
 // above the caption band; narration and captions play as on page scenes.
-import { AbsoluteFill, Audio, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { AbsoluteFill, Audio, OffthreadVideo, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { SAFE_ZONE } from "../constants";
 import type { CardBrand } from "./BrandCard";
 import { pageBottom } from "./caption";
@@ -12,7 +12,9 @@ export type BadgeIcon = "shield" | "cloud-off" | "check" | "lock" | "download" |
 
 export type SceneCardProps =
   | { variant: "title"; brand: CardBrand; text: string; phrases: PhraseClip[]; durationInFrames: number }
-  | { variant: "badges"; brand: CardBrand; items: { icon: BadgeIcon; label: string }[]; phrases: PhraseClip[]; durationInFrames: number };
+  | { variant: "badges"; brand: CardBrand; items: { icon: BadgeIcon; label: string }[]; phrases: PhraseClip[]; durationInFrames: number }
+  // v1.L: a span of another VideoMill video (file in publicDir), muted, fitted into the clear area.
+  | { variant: "clip"; brand: CardBrand; video: string; videoWidth: number; videoHeight: number; startFrom: number; phrases: PhraseClip[]; durationInFrames: number };
 
 const TYPE_SECONDS = 1.2; // a headline types out over at most this long
 
@@ -36,6 +38,30 @@ export const SceneCard: React.FC<SceneCardProps> = (props) => {
   const z = SAFE_ZONE[f];
   const u = Math.min(width, height) / 1080;
   const bottom = pageBottom(f, width, height);
+
+  if (props.variant === "clip") {
+    // Fit the clip into the clear area: safe-zone top (at least a margin) down to the caption strip.
+    const m = 40 * u;
+    const top = Math.max(z.top, m);
+    const a = props.videoWidth / props.videoHeight;
+    const w = Math.min(width - 2 * m, (bottom - top) * a);
+    const h = w / a;
+    const s = spring({ frame, fps, config: { damping: 200 }, durationInFrames: Math.round(fps * 0.3) });
+    return (
+      <AbsoluteFill style={{ backgroundColor: brand.colors.background }}>
+        <div
+          style={{
+            position: "absolute", left: (width - w) / 2, top: top + (bottom - top - h) / 2, width: w, height: h,
+            borderRadius: 20 * u, overflow: "hidden", boxShadow: `0 ${12 * u}px ${48 * u}px rgba(0,0,0,0.45)`, border: `${2 * u}px solid ${brand.colors.text}22`,
+            opacity: s, transform: `scale(${0.96 + 0.04 * s})`,
+          }}
+        >
+          <OffthreadVideo src={staticFile(props.video)} startFrom={props.startFrom} muted style={{ width: "100%", height: "100%" }} />
+        </div>
+        <Phrases phrases={props.phrases} vertical={vertical} brand={brand} />
+      </AbsoluteFill>
+    );
+  }
 
   return (
     <AbsoluteFill style={{ backgroundColor: brand.colors.background, fontFamily: fontStack(brand.text) }}>
@@ -71,16 +97,22 @@ export const SceneCard: React.FC<SceneCardProps> = (props) => {
           </div>
         )}
       </div>
-      {props.phrases.map((p, i) => (
-        <Sequence key={i} from={p.start} durationInFrames={p.end - p.start} layout="none">
-          {/* A title's caption that repeats its typed text goes to the SRT only, not on screen twice. */}
-          {p.caption && !(props.variant === "title" && p.caption === props.text) && <Caption text={p.caption} vertical={vertical} font={brand.text} />}
-          {p.audio && <Audio src={staticFile(p.audio)} />}
-        </Sequence>
-      ))}
+      <Phrases phrases={props.phrases} vertical={vertical} brand={brand} hide={props.variant === "title" ? props.text : undefined} />
     </AbsoluteFill>
   );
 };
+
+/** Narration + captions. A title's caption that repeats its typed text (`hide`) goes to the SRT only, not on screen twice. */
+const Phrases: React.FC<{ phrases: PhraseClip[]; vertical: boolean; brand: CardBrand; hide?: string }> = ({ phrases, vertical, brand, hide }) => (
+  <>
+    {phrases.map((p, i) => (
+      <Sequence key={i} from={p.start} durationInFrames={p.end - p.start} layout="none">
+        {p.caption && p.caption !== hide && <Caption text={p.caption} vertical={vertical} font={brand.text} />}
+        {p.audio && <Audio src={staticFile(p.audio)} />}
+      </Sequence>
+    ))}
+  </>
+);
 
 /** The headline typing out, with a blinking cursor in the brand accent. */
 const Typed: React.FC<{ text: string; color: string; cursor: string; size: number }> = ({ text, color, cursor, size }) => {

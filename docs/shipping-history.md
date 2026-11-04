@@ -12,6 +12,22 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.L — New footage: `clip` scene + local-file captures (shipped 2026-11-03)
+
+- **v1.L / v1.M (operator, 2026-11-03):** the first build-in-public video is a build update, "VideoMill made this video", using all footage ideas. The footage VideoMill lacks is built first (v1.L); the video is v1.M.
+- **v1.L** — two new footage sources, both formats:
+  - **`clip` scene:** plays a span of another project's exported video (`exports/<slug>/<ts or latest>/video-<f>.mp4`), muted under the voice-over, fitted into the clear area above the caption band (a 9:16 clip in 16:9 is fitted by height, and the reverse by width). Footage is VideoMill's own output, so it is real footage.
+  - **Local-file captures:** a capture may be a `file` in this repo (an HTML page, such as a storyboard, or an image, such as a contact sheet) instead of a `url`. It's recorded and measured like a page, so camera moves, anchors and `qa` work unchanged.
+- **Built:**
+  - `captures[].file` (`src/record/source.ts`), recorded like a page: images are wrapped full width, and the step key is the path plus a content hash. URL captures keep their earlier key.
+  - `clip` scenes: `SceneCard` variant `clip`, `<OffthreadVideo>` muted, pinned to an export folder.
+- **Changes from the plan:**
+  - A clip's `format` is optional; by default each output plays the source in its own format. The first render put a 9:16 clip in 16:9 as a narrow strip.
+  - Clips are copied into media before the first render. Remotion bundles the media dir once, so a later copy returned 404.
+  - Clip scenes render with concurrency 1. Four renderers decoding the same video crashed the frame extractor (EPIPE). That avoided the crash, but the root cause isn't confirmed (`architecture.md § 9`).
+- **Proven:** the operator approved the demo `videomill-build-update` (hash `32693bdabb94f192`). The save-page storyboard HTML and a contact sheet were recorded as local files in browser windows, and a save-page clip played in both formats. `qa` passes captions, loudness and silence; duration fails at 11.6 s < 15 s, as expected for a demo (v1.M).
+- Tests: 36 total (+2: capture sources, url/file + clip schema).
+
 ## v1.K — Benchmark: the Fiverr reference remade for `save-page-pdf-md` (shipped 2026-11-03)
 
 - **v1.K** — reproduce the reference's beats (§ 7) for the same extension. Quality bar = the Fiverr video.

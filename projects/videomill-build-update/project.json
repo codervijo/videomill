@@ -1,0 +1,86 @@
+{
+  "schema": "videomill-project-v1",
+  "slug": "videomill-build-update",
+  "type": "build-in-public",
+  "brand": "lamill",
+  "source": {
+    "url": "https://github.com/codervijo/videomill"
+  },
+  "formats": [
+    "16x9",
+    "9x16"
+  ],
+  "approval": {
+    "status": "approved",
+    "approvedAt": "2026-11-04T06:12:47.921Z",
+    "hash": "32693bdabb94f192"
+  },
+  "captures": [
+    {
+      "id": "storyboard",
+      "file": "out/save-page-pdf-md/storyboard.html"
+    },
+    {
+      "id": "sheet",
+      "file": "out/save-page-pdf-md/save-page-pdf-md-16x9-contact.png"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "intro",
+      "kind": "title",
+      "text": "VideoMill made this video.",
+      "narration": "VideoMill made this video.",
+      "caption": "VideoMill made this video.",
+      "minSeconds": 2
+    },
+    {
+      "id": "storyboard",
+      "kind": "page-scroll",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "capture": "storyboard",
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "hold",
+          "say": "I approve a script and a storyboard,",
+          "caption": "I approve a script and storyboard"
+        },
+        {
+          "kind": "pan",
+          "to": "+1",
+          "say": "scene by scene,",
+          "caption": "Scene by scene"
+        }
+      ]
+    },
+    {
+      "id": "sheet",
+      "kind": "page-scroll",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "capture": "sheet",
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "hold",
+          "say": "it renders every frame,",
+          "caption": "It renders every frame"
+        }
+      ]
+    },
+    {
+      "id": "clip",
+      "kind": "clip",
+      "project": "save-page-pdf-md",
+      "export": "20261104T055117Z",
+      "from": 4,
+      "narration": "and exports videos like this one.",
+      "caption": "And exports videos like this one",
+      "minSeconds": 2
+    }
+  ]
+}

@@ -91,7 +91,9 @@ export function storyboardHtml(inp: StoryboardInput, htmlPath: string): string {
   };
   const scenes = p.scenes.map((s) => {
     if (s.kind !== "page-scroll") {
-      const what = s.kind === "title" ? `types “${esc(s.text)}”` : s.items.map((b) => `[${b.icon}] ${esc(b.label)}`).join(" · ");
+      const what = s.kind === "title" ? `types “${esc(s.text)}”`
+        : s.kind === "badges" ? s.items.map((b) => `[${b.icon}] ${esc(b.label)}`).join(" · ")
+        : `plays ${esc(s.project)} ${s.format ?? "(same format)"} (export ${s.export}) from ${s.from}s, muted`;
       const say = s.narration ? `<div class="say">“${esc(s.narration)}”</div>` : "";
       const caption = s.caption && s.caption !== s.narration ? `<div class="cap">caption: ${esc(s.caption)}</div>` : "";
       return `<h2>${esc(s.id)}</h2><table><tr><td class="lbl">${s.kind}</td><td class="card" style="background:${brand.colors.background};color:${brand.colors.text}">${what}</td><td class="txt">${say}${caption}</td></tr></table>`;

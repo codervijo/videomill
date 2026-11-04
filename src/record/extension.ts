@@ -109,7 +109,7 @@ export async function recordExtension(cap: Capture, format: Format, mediaDir: st
   const { viewport, scale, mobile } = CAPTURE[format];
   const files = extensionFiles(mediaDir, cap.id, format);
   mkdirSync(mediaDir, { recursive: true });
-  const dir = runCopy(ext.name, cap.url);
+  const dir = runCopy(ext.name, cap.url!);
   const manifest = JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8"));
   const popupPath = manifest.action?.default_popup ?? "popup.html";
   const context = await chromium.launchPersistentContext("", {
@@ -132,7 +132,7 @@ export async function recordExtension(cap: Capture, format: Format, mediaDir: st
     if (iconFile) copyFileSync(join(dir, iconFile), files.icon);
 
     const page = await context.newPage();
-    await page.goto(cap.url, { waitUntil: "networkidle" });
+    await page.goto(cap.url!, { waitUntil: "networkidle" });
     // window.print would block on the native dialog, which can't be recorded (prd.md § 5 v1.J).
     await context.addInitScript(() => { window.print = () => {}; });
 

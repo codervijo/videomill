@@ -50,7 +50,8 @@ export async function renderClip(
     codec: "h264",
     outputLocation: outPath,
     inputProps: props,
-    concurrency: 4,
+    // A clip scene (v1.L) decodes a video per frame; parallel renderers crashed the frame extractor (EPIPE).
+    concurrency: clip.comp === "SceneCard" && clip.props.variant === "clip" ? 1 : 4,
     enforceAudioTrack: true, // silent cards still need an audio stream for concat
     chromiumOptions: { enableMultiProcessOnLinux: true },
     onProgress: ({ progress }) => {

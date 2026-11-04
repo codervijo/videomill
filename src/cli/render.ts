@@ -1,6 +1,6 @@
 // `record` and `render` — the per-scene pipeline (docs/architecture.md § 2).
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import { CAPTURE, DEFAULT_VOICE, FORMATS, FPS, LOUDNESS, QA, type Format } from "../constants.js";
 import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
 import { loadBrand } from "../brand/schema.js";
@@ -11,10 +11,13 @@ import type { Chrome, PageCameraProps, PhraseClip, PopupClip } from "../remotion
 import type { SceneCardProps } from "../remotion/SceneCard.js";
 import { frameLayout } from "../remotion/frame.js";
 import { loadProject, projectDir } from "../project/load.js";
-import { anchorsFor, approvalHash, type Project, type Scene } from "../project/schema.js";
+import { anchorsFor, approvalHash, type AnyScene, type Project, type Scene } from "../project/schema.js";
+import { videoFile } from "../export/manifest.js";
+import { EXPORTS_DIR } from "./export.js";
 import type { Timeline } from "../qa/captions.js";
 import { pageBottom } from "../remotion/caption.js";
 import { captureFiles, META_VERSION, recordCapture, type CaptureMeta } from "../record/site.js";
+import { captureSource } from "../record/source.js";
 import { EXT_META_VERSION, extensionBuildHash, extensionFiles, recordExtension, type ExtensionMeta } from "../record/extension.js";
 import { planCamera } from "../render/camera.js";
 import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
@@ -41,8 +44,10 @@ export async function recordAll(c: Pick<ReturnType<typeof ctx>, "p" | "media" | 
     const anchors = anchorsFor(c.p, cap.id);
     for (const f of formats) {
       const files = captureFiles(c.media, cap.id, f);
-      await step(c.stamps, `record ${cap.id} ${f}`, { url: cap.url, f, anchors, capture: CAPTURE[f], meta: META_VERSION }, [files.png, files.meta],
-        () => recordCapture(cap.url, f, anchors, c.media, cap.id), force);
+      const src = captureSource(cap, c.media);
+      // A url capture keeps its v1.J key, so recorded pages don't re-record.
+      await step(c.stamps, `record ${cap.id} ${f}`, { url: cap.url ? cap.url : src.key, f, anchors, capture: CAPTURE[f], meta: META_VERSION }, [files.png, files.meta],
+        () => recordCapture(src.href, f, anchors, c.media, cap.id), force);
       if (cap.extension) {
         const ef = extensionFiles(c.media, cap.id, f);
         const views = Object.fromEntries(cap.extension.outputs.map((o) => [o.id, anchorsFor(c.p, cap.id, o.id)]));
@@ -116,10 +121,10 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     const metaPath = out ? join(media, out.view.replace(/\.png$/, ".json")) : captureFiles(media, s.capture, f).meta;
     const meta: CaptureMeta = JSON.parse(readFileSync(metaPath, "utf8"));
     if (meta.version !== META_VERSION) throw new VideoMillError(`capture ${s.capture}${s.view ? ` view ${s.view}` : ""} @${f} predates meta v${META_VERSION} (text runs) — run \`videomill record ${slug} --force\``);
-    const shown = out?.url ?? cap.url;
+    const label = out?.url ?? captureSource(cap, media).label;
     const chrome: Chrome | undefined = !s.frame ? undefined
-      : s.frame === "editor" ? { kind: "editor", label: out?.title ?? new URL(cap.url).pathname.split("/").pop() ?? cap.url }
-      : { kind: "browser", label: shown.replace(/^https?:\/\/(www\.)?/, ""), icon: ext?.extension.icon };
+      : s.frame === "editor" ? { kind: "editor", label: out?.title ?? label.split("/").pop() ?? label }
+      : { kind: "browser", label: label.replace(/^https?:\/\/(www\.)?/, ""), icon: ext?.extension.icon };
     const area = s.frame ? frameLayout(f, FORMATS[f].width, FORMATS[f].height).area : undefined;
     const popups = (shows: ReturnType<typeof popupsOf>): PopupClip[] => shows.map((sh, i) => {
       const shot = sh.state ? ext!.after[sh.state] : ext!.popup;
@@ -128,6 +133,26 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     const stamp = cap.extension ? [stamps.get(`record ${cap.id} ${f}`), stamps.get(`record ${cap.id} extension ${f}`)] : stamps.get(`record ${cap.id} ${f}`);
     return { image: out ? out.view : `${s.capture}-${f}.png`, meta, chrome, area, popups, stamp };
   };
+
+  const clipName = (s: Extract<AnyScene, { kind: "clip" }>, f: Format) => `clip-${s.project}-${s.export}-${s.format ?? f}.mp4`;
+  /**
+   * Copy a clip scene's source video into the media dir (Remotion's publicDir) and return its name there.
+   * Export folders are written once and never changed, so the folder name pins the footage (v1.L).
+   */
+  const stageClip = (s: Extract<AnyScene, { kind: "clip" }>, f: Format, seconds: number): string => {
+    const src = join(EXPORTS_DIR, s.project, s.export, videoFile(s.format ?? f));
+    if (!existsSync(src)) throw new VideoMillError(`scene ${s.id}: no ${relative(process.cwd(), src)} — export ${s.project} first, or fix \`export\``);
+    const length = probeDurationSec(src);
+    if (s.from + seconds > length + 0.05) throw new VideoMillError(`scene ${s.id}: needs ${(s.from + seconds).toFixed(1)}s of ${s.project}'s ${s.format ?? f} video, which is ${length.toFixed(1)}s — lower \`from\` or shorten the narration`);
+    const name = clipName(s, f);
+    if (!existsSync(join(media, name))) { mkdirSync(media, { recursive: true }); copyFileSync(src, join(media, name)); }
+    return name;
+  };
+
+  // Stage clips before the first render: Remotion bundles the media dir once, so later copies would 404.
+  for (const s of p.scenes) {
+    if (s.kind === "clip") for (const f of formats) stageClip(s, f, timeScene(s, audio[s.id].map((a) => a.sec), FPS).seconds);
+  }
 
   const code = compositionHash();
   for (const f of formats) {
@@ -175,7 +200,8 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
         const sc = t.scene;
         const props: SceneCardProps = sc.kind === "title"
           ? { variant: "title", brand: cardBrand(brand), text: sc.text, phrases, durationInFrames }
-          : { variant: "badges", brand: cardBrand(brand), items: sc.items, phrases, durationInFrames };
+          : sc.kind === "badges" ? { variant: "badges", brand: cardBrand(brand), items: sc.items, phrases, durationInFrames }
+          : { variant: "clip", brand: cardBrand(brand), video: clipName(sc, f), videoWidth: FORMATS[sc.format ?? f].width, videoHeight: FORMATS[sc.format ?? f].height, startFrom: Math.round(sc.from * FPS), phrases, durationInFrames };
         await step(stamps, `render ${s.id} ${f}`, { props, brands: brandStamp, code }, [clip],
           () => renderClip(f, { comp: "SceneCard", props } satisfies Clip, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
           opts.force && (!opts.scene || opts.scene === s.id));

@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.K shipped (2026-11-03); v1.L (first build-in-public video) next. Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.L shipped (2026-11-03); v1.M (first build-in-public video) next. Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.K: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.L):
+Built through v1.L: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.M):
 
 ```
 videomill/
@@ -159,6 +159,19 @@ Playwright launches Chromium with a persistent context and the unpacked extensio
 - **`qa`:** the timeline records each scene's `view` and `area`. `onScreen()` / `overlapOf()` map boxes through the area, and only the area above the strip counts as footage. Card scenes have no capture, so only the safe-zone check applies. `metas` is keyed by `metaKey(capture, view)`.
 - **Storyboard:** framed scenes draw the footage area on the brand background, popup rows overlay the recorded popup, and card scenes are one row describing the card.
 
+### Local files and clips (v1.L)
+
+- **Local-file captures** (`src/record/source.ts`, `captureSource()`) are recorded exactly like a page.
+  - An HTML file is opened as `file://`. An image is wrapped in `media/<capture>-src.html`, which shows it at full width.
+  - The record step's key is the file's path plus a content hash, so a regenerated storyboard or contact sheet re-records. URL captures keep their earlier key, so nothing already recorded re-records.
+  - A browser frame's address bar shows the repo path.
+- **Clip scenes** play another project's exported video in the `SceneCard` composition (`variant: "clip"`):
+  - `<OffthreadVideo>`, muted under the narration, from `from` seconds;
+  - fitted into the clear area (safe-zone top, or at least a 40 px margin, down to the caption strip) on the brand background, with rounded corners and a 0.3 s settle-in;
+  - `render` copies the source to `media/clip-<project>-<export>-<format>.mp4` (Remotion's publicDir) and stops with `✗` if the source is missing or shorter than `from` plus the scene length;
+  - `qa` treats it like a card: no capture, only the safe-zone check.
+  - The clip is VideoMill's own output, so it counts as real footage.
+
 ## 3. Data shapes / schemas
 
 ### `projects/<slug>/project.json` — `videomill-project-v1` (locked in v1.C)
@@ -175,7 +188,7 @@ Validated by zod (`src/project/schema.ts`, strict: unknown keys are errors). Exa
 | `formats` | non-empty subset of `["16x9", "9x16"]` |
 | `voice?` | TTS voice id *(added v1.C)*; if absent, the brand's `voice`, else `DEFAULT_VOICE` (`af_heart`) *(default moved v1.F)* |
 | `approval` | `{ status: "draft" \| "approved", approvedAt?, hash? }`, default draft. `hash` = `approvalHash()` over captures + scenes + voice + publish; enforced by `render` since v1.G. Written by `videomill approve` only |
-| `captures[]` | `{ id, url, extension? }`, pages to record *(added v1.C)*. *(v1.J)* `extension: { name, outputs: [{ id, click, yields: "download" \| "page" }] }` also records that extension's popup on this page and what clicking each named popup button produces |
+| `captures[]` | `{ id, url \| file, extension? }`, pages to record *(added v1.C)*. *(v1.L)* exactly one of `url` or `file`: a path inside this repo, either an HTML page (e.g. `out/<slug>/storyboard.html`) or an image (e.g. a contact sheet). An `extension` needs a `url`. *(v1.J)* `extension: { name, outputs: [{ id, click, yields: "download" \| "page" }] }` also records that extension's popup on this page and what clicking each named popup button produces |
 | `scenes[]` | see below; ordered, non-empty, unique ids |
 | `publish?` | `{ title, description, hashtags[], channels[], utm{medium,campaign,content} }`, copied into the manifest (v1.H) |
 | `endCard?` | *(v1.K)* the brand end-card shape (`brands/<id>/brand.json`); replaces the brand's end card for this video. Part of `approvalHash()` |
@@ -196,6 +209,8 @@ Page scene (`kind: "page-scroll"`):
 | `caption` | whole-scene burned-in text; must be empty when shots carry `say`/`caption` |
 | `minSeconds` | default 3; scene length = max(minSeconds, narration + 0.6 s, shots), or with phrases max(minSeconds, timed shots) |
 | `framing?` | per-format `{ from?, to? }` overrides |
+
+Clip scene *(v1.L)*: `{ id, kind: "clip", project, export, format?, from = 0, narration, caption, minSeconds = 2 }`. It plays `exports/<project>/<export>/video-<format>.mp4` from `from` seconds, muted. With no `format`, each output plays the source video in its own format, so a 9:16 clip isn't a thin strip in 16:9. `export` is a folder name (`20261104T055117Z`), never `latest`, so approval covers the exact footage.
 
 Card scenes *(v1.J)*: `{ id, kind: "title", text, narration, caption, minSeconds = 2 }` and `{ id, kind: "badges", items: [{ icon, label }] (1–4), narration, caption, minSeconds = 2 }`, with `icon` one of `shield`, `cloud-off`, `check`, `lock`, `download`, `file`.
 
@@ -259,10 +274,12 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/project/schema.ts` | zod schema for `project.json`, `approvalHash()`, `approvalState()`, `anchorsFor()`; tests in `schema.test.ts` |
 | `src/project/load.ts` | `loadProject()` (typed errors listing each invalid field path), `writeProject()` |
 | `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** + visible text-run boxes JSON (`CaptureMeta` version 3: `{x,y,w,h}` per selector and per text node, device px) |
+| `src/record/extension.ts` | *(v1.J)* a Chrome extension's popup + outputs, and camera-ready views of them (`recordExtension()`, `editorHtml()`) |
+| `src/record/source.ts` | *(v1.L)* `captureSource()`: what a capture opens (a url, a repo HTML file, or an image wrapped full width) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
 | `src/tts/speakable.ts` | *(v1.K)* `speakable()`: the text the voice is given (domains spoken with "dot", `.io` → "I O", LaMill → "La Mill") |
-| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` (*v1.J* window chrome, popups), `BrandCard.tsx` (+ `BrandCard-<f>`), `SceneCard.tsx` (+ `SceneCard-<f>`, *v1.J* title/badges), `frame.ts` (*v1.J* window geometry), `fonts.ts` |
+| `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` (*v1.J* window chrome, popups), `BrandCard.tsx` (+ `BrandCard-<f>`), `SceneCard.tsx` (+ `SceneCard-<f>`, *v1.J* title/badges, *v1.L* clip), `frame.ts` (*v1.J* window geometry), `fonts.ts` |
 | `src/render/camera.ts` | `planCamera()` shots → segments; `shotsSeconds()`; tests in `camera.test.ts` |
 | `src/render/timeline.ts` | `phrasesOf()`, `timeScene()`: phrase audio lengths → timed shots + phrase windows; tests in `timeline.test.ts` |
 | `src/render/render.ts` | Remotion bundle (cached per publicDir) + `renderClip()` → `renderMedia` (h264, concurrency 4, `enforceAudioTrack`); `concatClips()`; `normalizeLoudness()` / `measureLufs()`; `writeSrt()`; ffmpeg contact sheet; `compositionHash()` so renders re-run when scene code changes |
@@ -325,10 +342,11 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-None in progress. v1.L (first lamill.io build-in-public video) is next.
+None in progress. v1.M (the build-update video "VideoMill made this video") is next.
 
 ## 9. Risks
 
+- **Clip scenes render at concurrency 1** (v1.L). With 4 renderers, Remotion's frame extractor crashed (EPIPE, then a 28 s `delayRender` timeout) while decoding the same clip. Concurrency 1 avoided it, but the root cause isn't confirmed. Clip scenes render more slowly; revisit if they get long.
 - **Extension popup capture** (§ 2, v1.J) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
 - **`qa` caption geometry is measured, not captured.** Boxes come from Playwright Chromium with the render's styles; Remotion renders with its own Chrome Headless Shell, so glyph metrics can differ by a pixel or so. The cover check samples each overlapping segment's start and end view, not every frame of a move.
 - **Kokoro on CPU** — measured in v1.E at roughly real time per phrase in the container (1.8 s audio in 2.0 s; 2.4 s in 1.4 s). Voice quality vs. the Fiverr benchmark is still unjudged. Mitigation: provider interface (ADR-0004).

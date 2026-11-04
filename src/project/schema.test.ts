@@ -59,3 +59,17 @@ test("a project's own end card (v1.K) is approved content", () => {
   assert.deepEqual(p.endCard, { ...end, seconds: 2 });
   assert.notEqual(approvalHash(p), approvalHash(base()));
 });
+
+test("v1.L: a capture is a url or a repo file, not both; clip scenes pin an export", () => {
+  const cap = (c: object) => Project.safeParse({ ...base(), captures: [{ id: "page", ...c }] });
+  assert.equal(cap({ file: "out/x/storyboard.html" }).success, true);
+  assert.equal(cap({ url: "https://example.com/", file: "out/x/a.png" }).success, false);
+  assert.equal(cap({}).success, false);
+  assert.equal(cap({ file: "/etc/passwd" }).success, false);
+  assert.equal(cap({ file: "../other/x.html" }).success, false);
+  assert.equal(cap({ file: "out/x/a.png", extension: { name: "e", outputs: [] } }).success, false); // an extension acts on a url
+  const clip = { id: "c", kind: "clip", project: "lamillrentals-promo", export: "20261104T030319Z", format: "9x16", narration: "This one.", caption: "" };
+  const p = Project.parse({ ...base(), scenes: [...base().scenes, clip] });
+  assert.equal((p.scenes[1] as { from: number }).from, 0);
+  assert.equal(Project.safeParse({ ...base(), scenes: [{ ...clip, export: "latest" }] }).success, false); // pinned, so approval covers the footage
+});
