@@ -142,6 +142,10 @@ Field-level shape in `docs/architecture.md § 3`. Additive-only within v1: new o
 
 Full field reference in `docs/architecture.md § 3`; the zod schema in `src/project/schema.ts` is the enforcement. Same additive-only rule as the export contract: a new optional field is fine, while a rename, removal or new required field bumps to `-v2`. Anchors are Playwright selectors resolved at record time, never hand-entered pixel offsets. Any edit to `scenes` after approval drops `approval.status` back to `draft` (via the stored hash). Render never runs on an unapproved project.
 
+### 🔒 v2 schemas (decided 2026-11-04 in v2.A, not built yet)
+
+`videomill-project-v2` (ADR-0006) lands in v2.B; `videomill-export-v2` (ADR-0007) with the first phase that changes the export. Until then the code reads and writes the v1 shapes above. Same additive-only rule within v2.
+
 ### 🔒 `brand.json` `videomill-brand-v1` (locked 2026-10-20 in v1.F)
 
 Field reference in `docs/architecture.md § 3`; `src/brand/schema.ts` enforces it. Same additive-only rule. Every value is traced to the brand's own site source in `brands/README.md`; never invent a color, logo or tagline. LaMill is the parent brand: site brands set `parent: { brand: "lamill" }`.

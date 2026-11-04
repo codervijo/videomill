@@ -12,6 +12,17 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v2.A — Decisions lock: UGC look, schemas v2, templates (shipped 2026-11-04)
+
+- `videomill-project-v2` (ADR-0006): `type` `promo | ugc | bip`, optional `audience`, optional `hooks.{a,b,c}` (opening scenes over the shared `scenes` body). Lands in v2.B; the four existing projects are rewritten to v2 in that commit.
+- `videomill-export-v2` (ADR-0007, supersedes ADR-0005): `videos[]` and `captions[]` entries carry `hook` and their own `utm`; `assets.json` referenced from the manifest. Lands with the first phase that changes the export.
+- Word captions by forced alignment of the TTS audio against its known text (ADR-0008); tool picked in a v2.C spike.
+- Optional `template` in `project.json` (ADR-0006): `tool-list`, `build-walkthrough`, `kinetic-launch`, `pov-pain`, `metric-story`; each type has a default. `new` writes the template's defaults and a skeleton with `‹FILL›` markers; `qa` ✗ on any left.
+- **UGC look references** (operator, 2026-11-04; swappable): problem → demo → result = Educative "POV: The highest paid engineer…" (https://www.youtube.com/shorts/kqLz53z8Inc; layout only — persistent top POV pill, 1–3 word captions, 1–3 s cuts; the skit itself isn't reproducible faceless); metric story = Marc Lou "I built a startup in 31 hours" (https://www.youtube.com/shorts/JHCAMmQUgf4; call-out hook, growing ✗ list).
+- Research: 20 examples, 17 with metrics from their own pages, formats and template proposals — `docs/research/ugc-formats-2026-11-04.md`. Testimonial, reaction and live-action formats are out (goal 4, § 2).
+- No stock footage in v2 (§ 2; backlog in § 5).
+- Operator answers (2026-11-04): export-v2 now rather than v1 + mappings; forced alignment over a character-count estimate; hooks as opening scenes, not text only; new cards in v2.C (POV caption + numbered item first); v3.A checks customer claims only, disclosure always.
+
 ## v1.M — First build-in-public video: "VideoMill made this video" (shipped 2026-11-03)
 
 - **v1.M** — the build-update video.

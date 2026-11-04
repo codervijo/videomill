@@ -49,4 +49,7 @@ Don't edit accepted ADRs. To reverse a decision:
 | ADR-0002 | All TypeScript on Node + pnpm | Accepted | 2026-10-20 |
 | ADR-0003 | Container-first via a new builder `video` stack | Accepted | 2026-10-20 |
 | ADR-0004 | TTS provider interface, Kokoro default | Accepted | 2026-10-20 |
-| ADR-0005 | Export folder + `videomill-export-v1` manifest contract | Accepted | 2026-10-20 |
+| ADR-0005 | Export folder + `videomill-export-v1` manifest contract | Superseded by ADR-0007 | 2026-10-20 |
+| ADR-0006 | `videomill-project-v2`: type rename, `audience`, `hooks` | Accepted | 2026-11-04 |
+| ADR-0007 | `videomill-export-v2`: hook variants, `assets.json` | Accepted | 2026-11-04 |
+| ADR-0008 | Word timings by forced alignment | Accepted | 2026-11-04 |

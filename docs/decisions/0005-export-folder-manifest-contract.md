@@ -1,7 +1,7 @@
 ---
 ID: ADR-0005
 Title: export-folder-manifest-contract
-Status: Accepted
+Status: Superseded by ADR-0007
 Date: 2026-10-20
 Supersedes: —
 ---

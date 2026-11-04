@@ -174,3 +174,17 @@
 > how does videomill CLI look like now?
 
 > Use audience instead of segment for the target-audience field. In v2.D, project type is set at new --type promo|ugc|bip and stored in project.json; type sets defaults (opening, footage, captions, voice, formats) that new flags can override; render gains --hook. Then commit and push.
+
+> show me the feature table
+
+> start v2.A
+
+> Research viral tech/B2B UGC videos, focusing on SaaS demos, developer tools, AI products, corporate humor, and founder stories. Find 20 real examples with direct video links, views, engagement, hooks, scripts, pacing, and visual styles. Prioritize repeatable, low-cost formats. Identify the top 5 formats VideoMill can reproduce programmatically using AI voiceovers, screen recordings, captions, stock footage, and avatars. Propose reusable CLI templates and configuration options. Do not invent virality metrics.
+
+> (pasted) Research viral tech/B2B UGC videos to develop reusable templates for VideoMill … starting references: Clay (noboringbrands.co), ProspectHalo (LinkedIn), Casey Hill (LinkedIn), viral.app UGC library, spytok business testimonials, redcurate buildinpublic digest … find 20 real viral examples … select 5 formats … design reusable CLI templates … do not fabricate metrics.
+
+> (1) No stock footage in v2. Add to the PRD backlog: stock video as B-roll only, from a whitelist of paid licensed sources; qa fails export if a stock clip lacks a source on the whitelist, a license file, or a clip ID in assets.json. No stock music.
+
+> (pasted) (2) Card types go in v2.C, no renumbering: POV caption + numbered item first, the rest later in v2. (3) Add optional template to project.json now. (4) References: … top pick for problem-demo-result and Marc Lou for metric-story … (5) v3.A checks customer claims only; avatar disclosure still required. Commit the v2.A docs and research, push, then start v2.B. … "wait, why no stock footage?"
+
+> yes, those are mine — go ahead
