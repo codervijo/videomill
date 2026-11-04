@@ -1,7 +1,7 @@
 // Phrase timeline (v1.E): each narration phrase maps to a shot, and its
 // measured audio length sets that shot's duration (kokoro-js has no word
 // timestamps — ADR-0004). Pure, so it is cache-stable and unit-testable.
-import { phrased, type Scene, type Shot } from "../project/schema.js";
+import { phrased, type AnyScene, type Shot } from "../project/schema.js";
 import { shotsSeconds } from "./camera.js";
 
 /** Silence after each phrase before the next shot starts. */
@@ -14,9 +14,9 @@ export type Phrase = { say: string; caption: string };
 /** A phrase placed on the scene timeline, in frames: [start, end). */
 export type TimedPhrase = Phrase & { start: number; end: number };
 
-/** Phrases in speaking order. Whole-scene narration is one phrase. */
-export function phrasesOf(scene: Scene): Phrase[] {
-  if (!phrased(scene)) return [{ say: scene.narration.trim(), caption: scene.caption.trim() }];
+/** Phrases in speaking order. Whole-scene narration (and every card scene, v1.J) is one phrase. */
+export function phrasesOf(scene: AnyScene): Phrase[] {
+  if (scene.kind !== "page-scroll" || !phrased(scene)) return [{ say: scene.narration.trim(), caption: scene.caption.trim() }];
   return (scene.shots ?? []).flatMap((sh) =>
     sh.kind !== "cut" && (sh.say || sh.caption) ? [{ say: sh.say ?? "", caption: sh.caption ?? sh.say ?? "" }] : []);
 }
@@ -26,10 +26,10 @@ export function phrasesOf(scene: Scene): Phrase[] {
  * phrasesOf). Returns the scene with every timed shot's `seconds` set, the
  * phrases placed on the timeline, and the scene length.
  */
-export function timeScene(scene: Scene, audioSec: number[], fps: number): { scene: Scene; phrases: TimedPhrase[]; seconds: number } {
+export function timeScene<S extends AnyScene>(scene: S, audioSec: number[], fps: number): { scene: S; phrases: TimedPhrase[]; seconds: number } {
   const phrases = phrasesOf(scene);
-  if (!phrased(scene)) {
-    const seconds = Math.max(scene.minSeconds, audioSec[0] + SCENE_TAIL, scene.shots ? shotsSeconds(scene.shots) : 0);
+  if (scene.kind !== "page-scroll" || !phrased(scene)) {
+    const seconds = Math.max(scene.minSeconds, audioSec[0] + SCENE_TAIL, scene.kind === "page-scroll" && scene.shots ? shotsSeconds(scene.shots) : 0);
     return { scene, seconds, phrases: [{ ...phrases[0], start: 0, end: Math.ceil(seconds * fps) }] };
   }
 
@@ -44,8 +44,8 @@ export function timeScene(scene: Scene, audioSec: number[], fps: number): { scen
     const p = phrases[k];
     const total = Math.max(sh.seconds ?? 0, p.say ? audioSec[k] + PHRASE_GAP : 0);
     k++;
-    // A move with its own `seconds` shorter than the phrase moves, then holds.
-    if (sh.kind !== "hold" && sh.seconds !== undefined && sh.seconds < total) {
+    // A move with its own `seconds` shorter than the phrase moves, then holds (a popup just stays up).
+    if (sh.kind !== "hold" && sh.kind !== "popup" && sh.seconds !== undefined && sh.seconds < total) {
       shots.push({ ...sh, seconds: sh.seconds }, { kind: "hold", seconds: total - sh.seconds });
       timed.push({ ...p, start: t, end: t + frames(sh.seconds) + frames(total - sh.seconds) });
     } else {
@@ -56,4 +56,18 @@ export function timeScene(scene: Scene, audioSec: number[], fps: number): { scen
   }
   const seconds = Math.max(scene.minSeconds, t / fps);
   return { scene: { ...scene, shots }, phrases: timed, seconds };
+}
+
+/** When each popup shot shows, in frames: [start, end), with its `state` (v1.J). Needs a timed scene. */
+export function popupsOf(scene: AnyScene, fps: number): { start: number; end: number; state?: string }[] {
+  if (scene.kind !== "page-scroll") return [];
+  const out: { start: number; end: number; state?: string }[] = [];
+  let t = 0;
+  for (const sh of scene.shots ?? []) {
+    if (sh.kind === "cut") continue;
+    const n = Math.max(1, Math.round(sh.seconds! * fps)); // same rounding as planCamera
+    if (sh.kind === "popup") out.push({ start: t, end: t + n, state: sh.state });
+    t += n;
+  }
+  return out;
 }

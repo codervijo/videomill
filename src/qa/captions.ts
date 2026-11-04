@@ -16,8 +16,19 @@ export type Timeline = {
   fps: number;
   pageBottom?: number; // output px; page footage ends here (v1.I). Absent = full frame (earlier exports).
   font?: FontRef; // file relative to the project's media dir
-  scenes: { id: string; capture: string; offset: number; segments: Segment[]; phrases: { caption: string; start: number; end: number }[] }[];
+  scenes: {
+    id: string;
+    capture?: string; // absent on card scenes (v1.J), which have no footage
+    view?: string; // extension output the camera moved over (v1.J); absent = the captured page
+    area?: Rect; // output px the footage is drawn in (v1.J window frame); absent = the whole frame
+    offset: number;
+    segments: Segment[];
+    phrases: { caption: string; start: number; end: number }[];
+  }[];
 };
+
+/** Key of a capture image's metadata in `captionIssues`' `metas`: the page, or one of its extension output views. */
+export const metaKey = (capture: string, view?: string) => (view ? `${capture}/${view}` : capture);
 
 export type Rect = { x: number; y: number; w: number; h: number };
 export type CaptionIssue = { scene: string; caption: string; at: number; problem: string };
@@ -28,10 +39,10 @@ export function intersect(a: Rect, b: Rect): Rect {
   return { x, y, w: Math.min(a.x + a.w, b.x + b.w) - x, h: Math.min(a.y + a.h, b.y + b.h) - y };
 }
 
-/** An image-pixel box as it appears on screen through `view`, in output px. */
-export function onScreen(box: Rect, view: View, f: Format): Rect {
-  const k = FORMATS[f].width / view.w;
-  return { x: (box.x - view.x) * k, y: (box.y - view.y) * k, w: box.w * k, h: box.h * k };
+/** An image-pixel box as it appears on screen through `view`, in output px, with footage drawn in `area`. */
+export function onScreen(box: Rect, view: View, f: Format, area: Rect = { x: 0, y: 0, w: FORMATS[f].width, h: FORMATS[f].height }): Rect {
+  const k = area.w / view.w;
+  return { x: area.x + (box.x - view.x) * k, y: area.y + (box.y - view.y) * k, w: box.w * k, h: box.h * k };
 }
 
 export function safeRect(f: Format): Rect {
@@ -40,10 +51,14 @@ export function safeRect(f: Format): Rect {
   return { x: z.left, y: z.top, w: width - z.left - z.right, h: height - z.top - z.bottom };
 }
 
-/** Where the caption overlaps the box's visible part through `view`, or null. Page footage spans 0–`bottom` px. */
-export function overlapOf(caption: Rect, box: Rect, view: View, f: Format, bottom: number = FORMATS[f].height): Rect | null {
-  const frame = { x: 0, y: 0, w: FORMATS[f].width, h: bottom };
-  const o = intersect(caption, intersect(onScreen(box, view, f), frame));
+/**
+ * Where the caption overlaps the box's visible part through `view`, or null.
+ * Footage is drawn in `area` (default the whole frame) and shows above `bottom` px.
+ */
+export function overlapOf(caption: Rect, box: Rect, view: View, f: Format, bottom: number = FORMATS[f].height, area?: Rect): Rect | null {
+  const a = area ?? { x: 0, y: 0, w: FORMATS[f].width, h: FORMATS[f].height };
+  const visible = intersect(a, { x: 0, y: 0, w: FORMATS[f].width, h: bottom });
+  const o = intersect(caption, intersect(onScreen(box, view, f, a), visible));
   return o.w >= 1 && o.h >= 1 ? o : null; // sub-pixel touches are rounding, not overlap
 }
 
@@ -52,7 +67,7 @@ export function captionIssues(t: Timeline, metas: Record<string, CaptureMeta>, b
   const issues: CaptionIssue[] = [];
   const zone = safeRect(t.format);
   for (const s of t.scenes) {
-    const meta = metas[s.capture];
+    const meta = s.capture ? metas[metaKey(s.capture, s.view)] : undefined;
     for (const ph of s.phrases) {
       if (!ph.caption) continue;
       const box = boxes[ph.caption];
@@ -60,15 +75,16 @@ export function captionIssues(t: Timeline, metas: Record<string, CaptureMeta>, b
       const issue = (problem: string) => issues.push({ scene: s.id, caption: ph.caption, at, problem });
       const outside = area(box) - area(intersect(box, zone));
       if (outside > 1) issue(`outside the ${t.format} safe zone (box y ${Math.round(box.y)}–${Math.round(box.y + box.h)}, zone ${zone.y}–${zone.y + zone.h})`);
+      if (!meta) continue; // a card scene: no footage under the caption
       // Every view the phrase is shown over: each overlapping segment's start and end.
       const views = s.segments.filter((g) => g.start < ph.end && g.end > ph.start).flatMap((g) => [g.from, g.to]);
       for (const [name, anchor] of Object.entries(meta.anchors)) {
-        const worst = views.map((v) => overlapOf(box, anchor, v, t.format, t.pageBottom)).filter((o) => o !== null)
+        const worst = views.map((v) => overlapOf(box, anchor, v, t.format, t.pageBottom, s.area)).filter((o) => o !== null)
           .sort((a, b) => area(b) - area(a))[0];
         if (worst) issue(`overlaps ${name} (${Math.round(worst.w)}×${Math.round(worst.h)} px)`);
       }
       // Page text the caption hides, in any of those views (captures before meta v3 have none).
-      const hidden = [...new Set((meta.text ?? []).filter((r) => views.some((v) => overlapOf(box, r.box, v, t.format, t.pageBottom))).map((r) => r.text))];
+      const hidden = [...new Set((meta.text ?? []).filter((r) => views.some((v) => overlapOf(box, r.box, v, t.format, t.pageBottom, s.area))).map((r) => r.text))];
       if (hidden.length) issue(`covers page text ${hidden.slice(0, 3).map((x) => `“${x.length > 40 ? x.slice(0, 39) + "…" : x}”`).join(", ")}${hidden.length > 3 ? ` +${hidden.length - 3} more` : ""}`);
     }
   }

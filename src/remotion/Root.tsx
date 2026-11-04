@@ -2,12 +2,14 @@ import { Composition } from "remotion";
 import { FORMATS, FORMAT_IDS, FPS } from "../constants";
 import { BrandCard, type BrandCardProps } from "./BrandCard";
 import { PageCamera, type PageCameraProps } from "./PageCamera";
+import { SceneCard, type SceneCardProps } from "./SceneCard";
 
 const cardDefaults: BrandCardProps = {
   variant: "intro", intro: "", subject: "", durationInFrames: FPS * 2,
   brand: { name: "", logo: "", withName: false, text: { family: "sans-serif" }, colors: { primary: "#000000", onPrimary: "#ffffff", background: "#ffffff", text: "#000000", muted: "#666666" } },
 };
 const defaults: PageCameraProps = { image: "", imageWidth: 0, segments: [], phrases: [], durationInFrames: FPS * 5 };
+const sceneCardDefaults: SceneCardProps = { variant: "title", brand: cardDefaults.brand, text: "", phrases: [], durationInFrames: FPS * 2 };
 
 export const Root: React.FC = () => (
   <>
@@ -34,6 +36,19 @@ export const Root: React.FC = () => (
         fps={FPS}
         durationInFrames={cardDefaults.durationInFrames}
         defaultProps={cardDefaults}
+        calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames })}
+      />
+    ))}
+    {FORMAT_IDS.map((f) => (
+      <Composition
+        key={`scene-card-${f}`}
+        id={`SceneCard-${f}`}
+        component={SceneCard}
+        width={FORMATS[f].width}
+        height={FORMATS[f].height}
+        fps={FPS}
+        durationInFrames={sceneCardDefaults.durationInFrames}
+        defaultProps={sceneCardDefaults}
         calculateMetadata={({ props }) => ({ durationInFrames: props.durationInFrames })}
       />
     ))}

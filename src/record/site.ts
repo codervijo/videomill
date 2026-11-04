@@ -3,7 +3,7 @@
 // and of every visible text run on the page (v1.I: `qa` keeps captions off them).
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { chromium } from "playwright";
+import { chromium, type Page } from "playwright";
 import { CAPTURE, type Format } from "../constants.js";
 import { info, VideoMillError } from "../pipeline/step.js";
 
@@ -17,6 +17,40 @@ export const captureFiles = (mediaDir: string, captureId: string, f: Format) => 
   png: join(mediaDir, `${captureId}-${f}.png`),
   meta: join(mediaDir, `${captureId}-${f}.json`),
 });
+
+/**
+ * Anchor boxes, visible text runs and a full-page PNG of a page at scrollY 0,
+ * in device px. Shared by the site recorder and extension output views (v1.J).
+ */
+export async function measurePage(page: Page, anchors: string[], scale: number, where: string, png: string): Promise<CaptureMeta> {
+  const meta: CaptureMeta = { version: META_VERSION, width: Math.round(page.viewportSize()!.width * scale), height: 0, anchors: {}, text: [] };
+  for (const sel of anchors) {
+    const box = await page.locator(sel).first().boundingBox({ timeout: 5000 }).catch(() => null);
+    if (!box) throw new VideoMillError(`anchor not found on ${where}: ${sel}`);
+    // page is at scrollY 0, so viewport coords == page coords
+    meta.anchors[sel] = { x: Math.round(box.x * scale), y: Math.round(box.y * scale), w: Math.round(box.width * scale), h: Math.round(box.height * scale) };
+  }
+
+  const runs = await page.evaluate(() => {
+    const out: { text: string; x: number; y: number; w: number; h: number }[] = [];
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      const text = n.textContent!.replace(/\s+/g, " ").trim();
+      const el = n.parentElement;
+      if (!text || !el || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      const r = range.getBoundingClientRect();
+      if (r.width >= 1 && r.height >= 1) out.push({ text, x: r.x, y: r.y, w: r.width, h: r.height });
+    }
+    return out;
+  });
+  meta.text = runs.map((r) => ({ text: r.text, box: { x: Math.round(r.x * scale), y: Math.round(r.y * scale), w: Math.round(r.w * scale), h: Math.round(r.h * scale) } }));
+
+  await page.screenshot({ path: png, fullPage: true });
+  meta.height = Math.round((await page.evaluate(() => document.documentElement.scrollHeight)) * scale);
+  return meta;
+}
 
 export async function recordCapture(url: string, format: Format, anchors: string[], mediaDir: string, captureId: string): Promise<void> {
   const { viewport, scale, mobile } = CAPTURE[format];
@@ -38,34 +72,9 @@ export async function recordCapture(url: string, format: Format, anchors: string
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(500);
 
-    const meta: CaptureMeta = { version: META_VERSION, width: viewport.width * scale, height: 0, anchors: {}, text: [] };
-    for (const sel of anchors) {
-      const box = await page.locator(sel).first().boundingBox({ timeout: 5000 }).catch(() => null);
-      if (!box) throw new VideoMillError(`anchor not found on ${url} @${format}: ${sel}`);
-      // page is at scrollY 0, so viewport coords == page coords
-      meta.anchors[sel] = { x: Math.round(box.x * scale), y: Math.round(box.y * scale), w: Math.round(box.width * scale), h: Math.round(box.height * scale) };
-    }
-
-    const runs = await page.evaluate(() => {
-      const out: { text: string; x: number; y: number; w: number; h: number }[] = [];
-      const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-      for (let n = walk.nextNode(); n; n = walk.nextNode()) {
-        const text = n.textContent!.replace(/\s+/g, " ").trim();
-        const el = n.parentElement;
-        if (!text || !el || !el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
-        const range = document.createRange();
-        range.selectNodeContents(n);
-        const r = range.getBoundingClientRect();
-        if (r.width >= 1 && r.height >= 1) out.push({ text, x: r.x, y: r.y, w: r.width, h: r.height });
-      }
-      return out;
-    });
-    meta.text = runs.map((r) => ({ text: r.text, box: { x: Math.round(r.x * scale), y: Math.round(r.y * scale), w: Math.round(r.w * scale), h: Math.round(r.h * scale) } }));
-
-    await page.screenshot({ path: files.png, fullPage: true });
-    meta.height = Math.round((await page.evaluate(() => document.documentElement.scrollHeight)) * scale);
+    const meta = await measurePage(page, anchors, scale, `${url} @${format}`, files.png);
     writeFileSync(files.meta, JSON.stringify(meta, null, 2) + "\n");
-    info(`${captureId} @${format}: ${meta.height}px, ${anchors.length} anchor(s), ${meta.text.length} text run(s)`);
+    info(`${captureId} @${format}: ${meta.height}px, ${anchors.length} anchor(s), ${meta.text!.length} text run(s)`);
     await context.close();
   } finally {
     await browser.close();

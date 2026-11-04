@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { Scene } from "../project/schema.js";
-import { PHRASE_GAP, phrasesOf, timeScene } from "./timeline.js";
+import { Scene, TitleScene } from "../project/schema.js";
+import { PHRASE_GAP, phrasesOf, popupsOf, timeScene } from "./timeline.js";
 
 const FPS = 30;
 const scene = (extra: object) => Scene.parse({ id: "s", kind: "page-scroll", capture: "page", narration: "", caption: "", ...extra });
@@ -44,4 +44,24 @@ test("silent shots keep their seconds and carry no phrase", () => {
 test("timed shots need `seconds` or `say`; shot `say` and scene narration don't mix", () => {
   assert.throws(() => scene({ shots: [{ kind: "hold" }] }), /needs `seconds`/);
   assert.throws(() => scene({ narration: "x", caption: "x", shots: [{ kind: "hold", say: "y" }] }), /leave scene `narration`/);
+});
+
+test("popup shots time like holds and report when each popup shows (v1.J)", () => {
+  const s = scene({ minSeconds: 0.1, shots: [
+    { kind: "hold", say: "Page." },
+    { kind: "popup", say: "Click." },
+    { kind: "popup", state: "markdown", seconds: 1, say: "Saved." },
+  ] });
+  const t = timeScene(s, [1, 1, 0.5], FPS);
+  assert.deepEqual(t.scene.shots!.map((sh) => sh.kind), ["hold", "popup", "popup"]); // a popup never splits into move + hold
+  assert.deepEqual(popupsOf(t.scene, FPS), [
+    { start: 38, end: 76, state: undefined }, // (1 + PHRASE_GAP) s each
+    { start: 76, end: 106, state: "markdown" }, // its own 1 s beats the 0.75 s phrase
+  ]);
+});
+
+test("card scenes are one whole-scene phrase (v1.J)", () => {
+  const card = TitleScene.parse({ id: "t", kind: "title", text: "Save any page.", narration: "Save any page.", caption: "" });
+  assert.deepEqual(phrasesOf(card), [{ say: "Save any page.", caption: "" }]);
+  assert.equal(timeScene(card, [1], FPS).seconds, 2); // minSeconds 2 > 1 + 0.6
 });

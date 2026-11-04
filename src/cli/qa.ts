@@ -7,7 +7,8 @@ import { LOUDNESS, QA, type Format } from "../constants.js";
 import { fail, hashOf, info, ok, step, StampFile, VideoMillError } from "../pipeline/step.js";
 import { loadProject, projectDir } from "../project/load.js";
 import { approvalHash, type Project } from "../project/schema.js";
-import { captionIssues, measureCaptions, type Timeline } from "../qa/captions.js";
+import { captionIssues, measureCaptions, metaKey, type Timeline } from "../qa/captions.js";
+import { extensionFiles } from "../record/extension.js";
 import { captureFiles, type CaptureMeta } from "../record/site.js";
 import { measureLoudness, probeDurationSec, silences } from "../render/render.js";
 import { requireApproved } from "./approve.js";
@@ -42,7 +43,12 @@ async function checkFormat(p: Project, f: Format): Promise<Check[]> {
   const files = qaFiles(p.slug, f);
   const media = join(projectDir(p.slug), "media");
   const t: Timeline = JSON.parse(readFileSync(files.timeline, "utf8"));
-  const metas = Object.fromEntries(p.captures.map((c) => [c.id, JSON.parse(readFileSync(captureFiles(media, c.id, f).meta, "utf8")) as CaptureMeta]));
+  const read = (path: string) => JSON.parse(readFileSync(path, "utf8")) as CaptureMeta;
+  const metas: Record<string, CaptureMeta> = {};
+  for (const c of p.captures) {
+    metas[metaKey(c.id)] = read(captureFiles(media, c.id, f).meta);
+    for (const o of c.extension?.outputs ?? []) metas[metaKey(c.id, o.id)] = read(extensionFiles(media, c.id, f).view(o.id).meta); // v1.J views
+  }
   const texts = [...new Set(t.scenes.flatMap((s) => s.phrases.map((ph) => ph.caption).filter(Boolean)))];
   const boxes = await measureCaptions(f, texts, t.font, t.font?.file && join(media, t.font.file));
   const issues = captionIssues(t, metas, boxes);

@@ -15,16 +15,20 @@ export type View = { x: number; y: number; w: number };
  * which captions must not cover (`qa`, v1.H).
  */
 export type Segment = { start: number; end: number; from: View; to: View; focus?: string };
+/** Where the footage is drawn, in output px (v1.J: inside a window frame; default the whole frame). */
+export type Area = { x: number; y: number; w: number; h: number };
+export const fullArea = (f: Format): Area => ({ x: 0, y: 0, w: FORMATS[f].width, h: FORMATS[f].height });
 
 const ANCHOR_MARGIN = 0.04; // of frame height, so a heading isn't flush with the top edge
 const MAX_ZOOM = 2.5; // screenshot is captured at 1:1 output pixels; beyond this it gets soft
 const LEGACY_HOLD_IN = 0.4;
 const LEGACY_HOLD_OUT = 0.6;
 
-export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationSec: number, fps: number): Segment[] {
+export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationSec: number, fps: number, area: Area = fullArea(f)): Segment[] {
   const frame = FORMATS[f];
-  const aspect = frame.height / frame.width;
+  const aspect = area.h / area.w;
   const imgW = meta.width;
+  const px = imgW / area.w; // image px per output px at the widest view
 
   const clamp = (v: View): View => {
     const w = Math.min(imgW, Math.max(imgW / MAX_ZOOM, v.w));
@@ -41,10 +45,11 @@ export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationS
     return b;
   };
   /** Full-width view with the anchor near the top of the frame. */
-  const at = (a: string): View => (a === "top" ? clamp({ x: 0, y: 0, w: imgW }) : clamp({ x: 0, y: box(a).y - frame.height * ANCHOR_MARGIN, w: imgW }));
-  // Zoom subjects fit and centre in the clear area — safe-zone top to the
-  // bottom of the page footage (v1.I caption strip) — not the whole frame.
-  const clearTop = SAFE_ZONE[f].top / frame.height, clearBottom = pageBottom(f, frame.width, frame.height) / frame.height; // of frame height
+  const at = (a: string): View => (a === "top" ? clamp({ x: 0, y: 0, w: imgW }) : clamp({ x: 0, y: box(a).y - area.h * ANCHOR_MARGIN * px, w: imgW }));
+  // Zoom subjects fit and centre in the clear part of the footage area — from
+  // the safe-zone top to the caption strip (v1.I) — not the whole area.
+  const clearTop = (Math.max(SAFE_ZONE[f].top, area.y) - area.y) / area.h; // of area height
+  const clearBottom = (Math.min(pageBottom(f, frame.width, frame.height), area.y + area.h) - area.y) / area.h;
   const clearMid = (clearTop + clearBottom) / 2;
   /** View that fits the element at `fill` of the clear area, centred in it. */
   const zoomTo = (a: string, fill: number): View => {
@@ -67,7 +72,9 @@ export function planCamera(scene: Scene, f: Format, meta: CaptureMeta, durationS
   for (const sh of shots) {
     if (sh.kind === "cut") { cur = at(sh.to); focus = anchor(sh.to); continue; }
     if (sh.kind === "hold" && sh.at) { cur = at(sh.at); focus = anchor(sh.at); }
-    const target = sh.kind === "hold" ? cur : sh.kind === "pan" ? (sh.to.startsWith("+") ? clamp({ ...cur, y: cur.y + Number(sh.to.slice(1)) * frame.height }) : at(sh.to)) : zoomTo(sh.target, sh.fill);
+    const target = sh.kind === "hold" || sh.kind === "popup" ? cur // a popup shot holds the camera (v1.J)
+      : sh.kind === "pan" ? (sh.to.startsWith("+") ? clamp({ ...cur, y: cur.y + Number(sh.to.slice(1)) * area.h * px }) : at(sh.to))
+      : zoomTo(sh.target, sh.fill);
     if (sh.kind === "pan") focus = anchor(sh.to);
     if (sh.kind === "zoom") focus = sh.target;
     if (sh.seconds === undefined) throw new VideoMillError(`scene ${scene.id}: shot not timed — run timeScene() first`);

@@ -54,3 +54,13 @@ test("regression: export 20261020T233815Z (9:16) fails — “No minimum order.�
   const hit = issues.find((i) => i.caption === "No minimum order." && i.problem.includes("Folding Chair - White"));
   assert.ok(hit, `expected the Folding Chair overlap, got ${JSON.stringify(issues)}`);
 });
+
+test("in a window frame (v1.J) boxes map through the footage area, and only the area counts as footage", () => {
+  const area = { x: 24, y: 364, w: 1032, h: 1556 };
+  assert.deepEqual(onScreen({ x: 0, y: 1000, w: 1080, h: 100 }, { x: 0, y: 1000, w: 1080 }, "9x16", area), { x: 24, y: 364, w: 1032, h: 1032 / 1080 * 100 });
+  // A caption over the window's left margin hides nothing of the page there.
+  assert.equal(overlapOf({ x: 0, y: 400, w: 20, h: 50 }, { x: 0, y: 0, w: 1080, h: 8000 }, { x: 0, y: 0, w: 1080 }, "9x16", 1025, area), null);
+  // Card scenes have no capture: only the safe-zone check applies.
+  const card: Timeline = { format: "9x16", fps: 30, scenes: [{ id: "t", offset: 0, segments: [], phrases: [{ caption: "Hi", start: 0, end: 30 }] }] };
+  assert.deepEqual(captionIssues(card, {}, { Hi: { x: 300, y: 1100, w: 400, h: 100 } }), []);
+});

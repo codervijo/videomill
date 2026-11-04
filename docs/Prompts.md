@@ -108,3 +108,9 @@
 > commit the prompt log and push - ignore tabmill's area of work and you focus on your side.
 
 > commit the prompt log and push
+
+> continue with the scene kinds
+
+> approve save-page-pdf-md and render, qa, show me
+
+> commit v1.J and push. i think that video is perfect and i am quite dumbfounded at what just happened

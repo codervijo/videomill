@@ -8,6 +8,7 @@ import { LOUDNESS, type Format } from "../constants.js";
 import { hashOf, VideoMillError } from "../pipeline/step.js";
 import type { BrandCardProps } from "../remotion/BrandCard.js";
 import type { PageCameraProps } from "../remotion/PageCamera.js";
+import type { SceneCardProps } from "../remotion/SceneCard.js";
 
 const ENTRY = resolve("src/remotion/index.ts");
 const REMOTION_DIR = resolve("src/remotion");
@@ -28,7 +29,7 @@ async function serveUrlFor(publicDir: string): Promise<string> {
 }
 
 /** Composition id → its props. */
-export type Clip = { comp: "PageCamera"; props: PageCameraProps } | { comp: "BrandCard"; props: BrandCardProps };
+export type Clip = { comp: "PageCamera"; props: PageCameraProps } | { comp: "BrandCard"; props: BrandCardProps } | { comp: "SceneCard"; props: SceneCardProps };
 
 export async function renderClip(
   format: Format,

@@ -12,6 +12,27 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.J — Extension capture + new scene kinds (shipped 2026-11-03)
+
+- **v1.J / v1.K split (operator, 2026-11-03):** the benchmark was one phase; extension capture + new visuals is v1.J, the remake itself v1.K, build-in-public → v1.L.
+- **v1.J** — the riskiest piece (extension recording), after the pipeline is proven.
+  - **Extension:** `save-page-pdf-md` ("Save Page as Markdown or PDF" v0.1.0), built unpacked in the tabmill repo at `~/work/projects/plugins/chrome-extension-projects/extensions/save-page-pdf-md/.output/chrome-mv3`. VideoMill copies the build into `.cache/` and never writes to the tabmill repo.
+  - **Real output only:** the popup is the extension's own `popup.html`; the Markdown file and PDF are what the extension produces from the recorded page. The extension reads a tab only after a toolbar click (`activeTab`), which automation can't make, so the recording copy alone gets host access to the demo page. Its UI is unchanged.
+  - **No print dialog (operator):** Chrome's native print dialog can't be recorded; the PDF beat shows the extension's print view, then the PDF Chromium produces from it.
+  - **New scene kinds,** both formats: title card (typed headline), browser frame around page footage, popup overlay on a page, file view (the real `.md` text), PDF view, badge row. The end card already covers the CTA.
+- **Spike first (2026-11-03):** Playwright's bundled Chromium in new headless mode loads the unpacked build in the container with no Xvfb. The tabmill popup template's `?tabId=` test hook points the popup at the demo page. Real popup, `.md` download, print view and PDF came out in ~3 s.
+- **Built:**
+  - `make ext-copy`; `captures[].extension`; a per-format `record <capture> extension <f>` step.
+  - Per-output views: the print page, and the downloaded `.md` laid out as an editor page of its real text. Each is measured like a captured page, so anchors and caption `qa` work on it.
+  - `frame: "browser" | "editor"`, `view`, the `popup` shot, and `title` / `badges` card scenes (`architecture.md § 2 Scene kinds and window frames`).
+  - **Shape change from the proposal:** browser/file/PDF are page-scene options (`frame` + `view`), not three separate kinds. That keeps camera moves, captions and `qa` working inside the window.
+- **Proven:** the operator approved the demo `save-page-pdf-md` (hash `8400a6c5998e675a`), which renders all kinds in both formats. `qa` passed both (−14.0 LUFS, TP −1.5, 20.8 s), and the operator called the video "perfect".
+  - Fixed after the first render: the print view's address bar read "null/print.html", because `URL.origin` is "null" for `chrome-extension://`. Back-to-back popup shots also flickered; a popup that follows another no longer re-animates.
+  - `lamillrentals-promo` re-rendered pixel-identical to its last export (PSNR ∞), so the camera's new `area` changed nothing without a frame.
+- **Spelling:** the popup footer said "Built by Lamill" (tabmill template). It was fixed and rebuilt on the tabmill side before the recording; VideoMill never alters recorded UI.
+- **Reference video:** YouTube removed it after a copyright claim by "Free To Use", apparently on its music, so v1.K uses voice-over.
+- Tests: 31 total (+7: schema ×2, camera ×2, timeline ×2, qa ×1, editor view ×1, and the earlier extension schema test).
+
 ## v1.I — v1.H defect fixes (shipped 2026-10-20)
 
 - Defects seen in the shipped v1.H video (operator, 2026-10-20). Inserted before the benchmark; benchmark → v1.J, build-in-public → v1.K.

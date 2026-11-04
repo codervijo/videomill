@@ -5,9 +5,11 @@ import { loadBrand } from "../brand/schema.js";
 import { info, ok, soft, step, StampFile, VideoMillError } from "../pipeline/step.js";
 import { loadProject, projectDir, projectPath } from "../project/load.js";
 import { approvalHash, approvalState } from "../project/schema.js";
+import { metaKey } from "../qa/captions.js";
+import { extensionFiles } from "../record/extension.js";
 import { captureFiles } from "../record/site.js";
 import { phrasesOf } from "../render/timeline.js";
-import { writeStoryboard } from "../storyboard/build.js";
+import { writeStoryboard, type StoryboardInput } from "../storyboard/build.js";
 import { recordAll, type RunOpts } from "./render.js";
 
 export const storyboardFiles = (slug: string) => {
@@ -28,11 +30,23 @@ export async function storyboard(slug: string, opts: Pick<RunOpts, "force">): Pr
 
   const hash = approvalHash(p);
   const status = approvalState(p);
-  const captures = Object.fromEntries(p.captures.map((c) => [c.id, Object.fromEntries(p.formats.map((f) => [f, captureFiles(media, c.id, f)]))]));
+  const captures: StoryboardInput["captures"] = {};
+  const popups: NonNullable<StoryboardInput["popups"]> = {};
+  for (const c of p.captures) {
+    captures[metaKey(c.id)] = Object.fromEntries(p.formats.map((f) => [f, captureFiles(media, c.id, f)]));
+    for (const o of c.extension?.outputs ?? []) captures[metaKey(c.id, o.id)] = Object.fromEntries(p.formats.map((f) => [f, extensionFiles(media, c.id, f).view(o.id)]));
+    if (c.extension) {
+      const outs = c.extension.outputs;
+      popups[c.id] = Object.fromEntries(p.formats.map((f) => {
+        const ef = extensionFiles(media, c.id, f);
+        return [f, { popup: ef.popup, after: Object.fromEntries(outs.map((o) => [o.id, ef.after(o.id)])) }];
+      }));
+    }
+  }
   const files = storyboardFiles(slug);
-  const records = p.captures.flatMap((c) => p.formats.map((f) => stamps.get(`record ${c.id} ${f}`)));
-  await step(stamps, "storyboard", { hash, status, records, brand, parent, v: 1 }, [files.html, files.png],
-    () => writeStoryboard({ p, brand, parent, status, hash, captures }, files.html, files.png), opts.force);
+  const records = p.captures.flatMap((c) => p.formats.flatMap((f) => [stamps.get(`record ${c.id} ${f}`), stamps.get(`record ${c.id} extension ${f}`)]));
+  await step(stamps, "storyboard", { hash, status, records, brand, parent, v: 2 }, [files.html, files.png],
+    () => writeStoryboard({ p, brand, parent, status, hash, captures, popups }, files.html, files.png), opts.force);
   info(`out/${slug}/storyboard.html — status ${status}`);
 }
 

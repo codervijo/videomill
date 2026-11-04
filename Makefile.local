@@ -35,3 +35,14 @@ x:
 
 down:
 	@bash "$(BUILDER_HOST_PATH)/dev_container.sh" stop
+
+# Host: copy an unpacked extension build in for recording (v1.J), e.g.
+#   make ext-copy SRC=~/work/projects/plugins/chrome-extension-projects/extensions/save-page-pdf-md/.output/chrome-mv3 NAME=save-page-pdf-md
+#   The container only sees this repo; .cache/ is gitignored. The source is only read.
+.PHONY: ext-copy
+ext-copy:
+	@if [ -f /.dockerenv ]; then echo "✗ 'make ext-copy' runs on the host"; exit 1; fi
+	@if [ -z "$(SRC)" ] || [ -z "$(NAME)" ]; then echo "✗ usage: make ext-copy SRC=<unpacked build dir> NAME=<name>"; exit 1; fi
+	@if [ ! -f "$(SRC)/manifest.json" ]; then echo "✗ no manifest.json in $(SRC) — point SRC at the unpacked build (e.g. .output/chrome-mv3)"; exit 1; fi
+	@rm -rf ".cache/ext-src/$(NAME)" && mkdir -p .cache/ext-src && cp -r "$(SRC)" ".cache/ext-src/$(NAME)"
+	@echo "✓ .cache/ext-src/$(NAME) ← $(SRC) ($$(sed -n 's/.*"name": *"\([^"]*\)".*/\1/p' "$(SRC)/manifest.json" | head -1) $$(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$(SRC)/manifest.json" | head -1))"

@@ -84,12 +84,17 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 | v1.G | ✅ done 2026-10-20 | Script/storyboard draft + approval gate |
 | v1.H | ✅ done 2026-10-20 | lamillrentals.com end to end — `qa` command (caption overlap, loudness, contact sheet) gates `manifest.json` export (`videomill-export-v1`) |
 | v1.I | ✅ done 2026-10-20 | v1.H defect fixes — parent opener off by default, ≤1 s silence between phrases, ~2 s end card, 9:16 captions at the bottom of the safe zone with content framed above, `qa` caption boxes vs visible anchor boxes, duration targets |
-| v1.J | ⏳ planned | Benchmark: record a Chrome extension popup + reproduce the Fiverr video in 16:9 + 9:16 |
-| v1.K | ⏳ planned | First lamill.io build-in-public video |
+| v1.J | ✅ done 2026-11-03 | Extension capture + new scene kinds — record the unpacked extension's real popup, Markdown and PDF output; title card, browser frame, popup overlay, file view, badges |
+| v1.K | ⏳ planned | Benchmark: reproduce the Fiverr video's beats for `save-page-pdf-md` in 16:9 + 9:16, voice-over, `qa` + export |
+| v1.L | ⏳ planned | First lamill.io build-in-public video |
 
 #### Design notes
 
-- **v1.J** — the riskiest piece (extension popup recording) moves here, after the pipeline is proven. Needs the Fiverr reference video and the extension it shows (see § 7). Quality bar = the Fiverr video.
+- **v1.K** — reproduce the reference's beats (§ 7) for the same extension. Quality bar = the Fiverr video.
+  - **Audio (operator, 2026-11-03):** Kokoro voice-over + captions, no music. The reference was taken off YouTube after a copyright claim by "Free To Use", apparently on its music.
+  - **Pages (operator):** Project Gutenberg (public domain) for every page beat, including "Want just the article?"; no Daily Mail or other third-party news content.
+  - **Reference beats (36.8 s, 16:9, on-screen text on a LaMill-blue background):** typed headline "Save any web page as Markdown or PDF in one click." → "Want just the article?" over a cluttered article → "LaMill · One click. A cleaner page." → "Save it as Markdown." (popup → `.md` in an editor) → "Or save it as PDF." (popup → print dialog → clean print view) → badges "Runs 100% locally · Nothing uploaded · Free to use" → "Save smarter. Stay private." → end card "Useful tools for real work · Install Free · lamill.io".
+  - **Carried from v1.J (2026-11-03):** the demo `projects/save-page-pdf-md/` ends on the `lamill` brand's "Start a project → lamill.io" card. The reference ends "Install Free · lamill.io", so the extension needs its own end card. The project is typed `site-promo`, the closest existing type.
 
 ## 6. Conformance rules
 
@@ -100,7 +105,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 ## 7. Open questions
 
-- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.J (benchmark). **Partly answered 2026-10-20:** the video is mounted from a host path to `.cache/reference/` (outside git); reproduce the same extension with the same script beats as the Fiverr video. **Video answered 2026-10-23:** it's LaMill's own YouTube upload "Save Any Web Page as Markdown or PDF in One Click (Free Chrome Extension)" (https://www.youtube.com/watch?v=h2GWC_BamQQ), downloaded with yt-dlp to `.cache/reference/h2GWC_BamQQ.mp4` (1920×1080, 60 fps, AV1 + AAC, 36.8 s). **Still open:** the extension's location (unpacked path or repo).
+- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.J (benchmark). **Partly answered 2026-10-20:** the video is mounted from a host path to `.cache/reference/` (outside git); reproduce the same extension with the same script beats as the Fiverr video. **Video answered 2026-10-23:** it's LaMill's own YouTube upload "Save Any Web Page as Markdown or PDF in One Click (Free Chrome Extension)" (https://www.youtube.com/watch?v=h2GWC_BamQQ), downloaded with yt-dlp to `.cache/reference/h2GWC_BamQQ.mp4` (1920×1080, 60 fps, AV1 + AAC, 36.8 s). **Extension answered 2026-11-03:** `save-page-pdf-md` in the tabmill repo (see § 5 v1.J). The YouTube upload was later removed after a copyright claim; the local copy is the reference. **Resolved.**
 
 Resolved in v1.A (2026-10-20): CLI language → all TypeScript (ADR-0002); container recipe → new builder `video` stack (ADR-0003); TTS → Kokoro behind a provider interface (ADR-0004); export contract → `videomill-export-v1` (ADR-0005); v1 channels → YouTube + X only, TikTok deferred to v2 or later.
 

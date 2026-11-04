@@ -1,0 +1,147 @@
+{
+  "schema": "videomill-project-v1",
+  "slug": "save-page-pdf-md",
+  "type": "site-promo",
+  "brand": "lamill",
+  "source": {
+    "url": "https://www.gutenberg.org/cache/epub/79825/pg79825-images.html"
+  },
+  "formats": [
+    "16x9",
+    "9x16"
+  ],
+  "approval": {
+    "status": "approved",
+    "approvedAt": "2026-11-04T05:22:33.279Z",
+    "hash": "8400a6c5998e675a"
+  },
+  "captures": [
+    {
+      "id": "page",
+      "url": "https://www.gutenberg.org/cache/epub/79825/pg79825-images.html",
+      "extension": {
+        "name": "save-page-pdf-md",
+        "outputs": [
+          {
+            "id": "markdown",
+            "click": "Save as Markdown",
+            "yields": "download"
+          },
+          {
+            "id": "pdf",
+            "click": "Save as PDF",
+            "yields": "page"
+          }
+        ]
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "intro",
+      "kind": "title",
+      "text": "Save any web page as Markdown or PDF.",
+      "narration": "Save any web page as Markdown or PDF, in one click.",
+      "caption": "Markdown or PDF, in one click",
+      "minSeconds": 2
+    },
+    {
+      "id": "page",
+      "kind": "page-scroll",
+      "capture": "page",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "hold",
+          "say": "Want just the article?"
+        },
+        {
+          "kind": "popup",
+          "say": "Click Save as Markdown,",
+          "caption": "Save it as Markdown"
+        },
+        {
+          "kind": "popup",
+          "state": "markdown",
+          "say": "and you get a clean Markdown file,",
+          "caption": "A clean .md file"
+        }
+      ]
+    },
+    {
+      "id": "file",
+      "kind": "page-scroll",
+      "capture": "page",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "view": "markdown",
+      "frame": "editor",
+      "shots": [
+        {
+          "kind": "hold",
+          "say": "with the title, source link and date.",
+          "caption": "Title, source link and date"
+        }
+      ]
+    },
+    {
+      "id": "pdf",
+      "kind": "page-scroll",
+      "capture": "page",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "popup",
+          "state": "pdf",
+          "say": "Or save it as a print-ready PDF.",
+          "caption": "Or save it as PDF"
+        }
+      ]
+    },
+    {
+      "id": "print",
+      "kind": "page-scroll",
+      "capture": "page",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "view": "pdf",
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "hold",
+          "say": "One click, a cleaner page.",
+          "caption": "One click. A cleaner page."
+        }
+      ]
+    },
+    {
+      "id": "private",
+      "kind": "badges",
+      "items": [
+        {
+          "icon": "shield",
+          "label": "Runs locally"
+        },
+        {
+          "icon": "cloud-off",
+          "label": "Nothing uploaded"
+        },
+        {
+          "icon": "check",
+          "label": "Free to use"
+        }
+      ],
+      "narration": "It runs locally, and nothing is uploaded.",
+      "caption": "Runs locally · nothing uploaded",
+      "minSeconds": 2
+    }
+  ]
+}

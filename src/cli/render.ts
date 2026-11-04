@@ -7,15 +7,18 @@ import { loadBrand } from "../brand/schema.js";
 import { requireApproved } from "./approve.js";
 import { hashOf, info, ok, step, StampFile, VideoMillError } from "../pipeline/step.js";
 import type { BrandCardProps } from "../remotion/BrandCard.js";
-import type { PhraseClip } from "../remotion/PageCamera.js";
+import type { Chrome, PageCameraProps, PhraseClip, PopupClip } from "../remotion/PageCamera.js";
+import type { SceneCardProps } from "../remotion/SceneCard.js";
+import { frameLayout } from "../remotion/frame.js";
 import { loadProject, projectDir } from "../project/load.js";
-import { anchorsFor, approvalHash, type Project } from "../project/schema.js";
+import { anchorsFor, approvalHash, type Project, type Scene } from "../project/schema.js";
 import type { Timeline } from "../qa/captions.js";
 import { pageBottom } from "../remotion/caption.js";
 import { captureFiles, META_VERSION, recordCapture, type CaptureMeta } from "../record/site.js";
+import { EXT_META_VERSION, extensionBuildHash, extensionFiles, recordExtension, type ExtensionMeta } from "../record/extension.js";
 import { planCamera } from "../render/camera.js";
 import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
-import { phrasesOf, timeScene } from "../render/timeline.js";
+import { phrasesOf, popupsOf, timeScene } from "../render/timeline.js";
 import { getTtsProvider, type TtsProvider } from "../tts/provider.js";
 
 export type RunOpts = { force: boolean; scene?: string; format?: Format };
@@ -39,6 +42,13 @@ export async function recordAll(c: Pick<ReturnType<typeof ctx>, "p" | "media" | 
       const files = captureFiles(c.media, cap.id, f);
       await step(c.stamps, `record ${cap.id} ${f}`, { url: cap.url, f, anchors, capture: CAPTURE[f], meta: META_VERSION }, [files.png, files.meta],
         () => recordCapture(cap.url, f, anchors, c.media, cap.id), force);
+      if (cap.extension) {
+        const ef = extensionFiles(c.media, cap.id, f);
+        const views = Object.fromEntries(cap.extension.outputs.map((o) => [o.id, anchorsFor(c.p, cap.id, o.id)]));
+        await step(c.stamps, `record ${cap.id} extension ${f}`, { url: cap.url, f, extension: cap.extension, views, build: extensionBuildHash(cap.extension.name), capture: CAPTURE[f], v: EXT_META_VERSION },
+          [ef.meta, ef.popup, ...cap.extension.outputs.flatMap((o) => [ef.view(o.id).png, ef.view(o.id).meta])],
+          () => recordExtension(cap, f, c.media, views), force);
+      }
     }
   }
 }
@@ -95,6 +105,27 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
   }
   const endSay = brand.endCard?.say ? await voiced("tts end-card", brand.endCard.say, opts.force && !opts.scene) : undefined;
 
+  /** The image a page scene's camera moves over (the page, or an extension output's view), its window and popups (v1.J). */
+  const pageScene = (s: Scene, f: Format) => {
+    const cap = p.captures.find((c) => c.id === s.capture)!;
+    const ext: ExtensionMeta | undefined = cap.extension ? JSON.parse(readFileSync(extensionFiles(media, cap.id, f).meta, "utf8")) : undefined;
+    const out = s.view ? ext?.outputs[s.view] : undefined;
+    const metaPath = out ? join(media, out.view.replace(/\.png$/, ".json")) : captureFiles(media, s.capture, f).meta;
+    const meta: CaptureMeta = JSON.parse(readFileSync(metaPath, "utf8"));
+    if (meta.version !== META_VERSION) throw new VideoMillError(`capture ${s.capture}${s.view ? ` view ${s.view}` : ""} @${f} predates meta v${META_VERSION} (text runs) — run \`videomill record ${slug} --force\``);
+    const shown = out?.url ?? cap.url;
+    const chrome: Chrome | undefined = !s.frame ? undefined
+      : s.frame === "editor" ? { kind: "editor", label: out?.title ?? new URL(cap.url).pathname.split("/").pop() ?? cap.url }
+      : { kind: "browser", label: shown.replace(/^https?:\/\/(www\.)?/, ""), icon: ext?.extension.icon };
+    const area = s.frame ? frameLayout(f, FORMATS[f].width, FORMATS[f].height).area : undefined;
+    const popups = (shows: ReturnType<typeof popupsOf>): PopupClip[] => shows.map((sh, i) => {
+      const shot = sh.state ? ext!.after[sh.state] : ext!.popup;
+      return { image: shot.png, width: shot.width, height: shot.height, start: sh.start, end: sh.end, enter: i === 0 || shows[i - 1].end !== sh.start };
+    });
+    const stamp = cap.extension ? [stamps.get(`record ${cap.id} ${f}`), stamps.get(`record ${cap.id} extension ${f}`)] : stamps.get(`record ${cap.id} ${f}`);
+    return { image: out ? out.view : `${s.capture}-${f}.png`, meta, chrome, area, popups, stamp };
+  };
+
   const code = compositionHash();
   for (const f of formats) {
     const clips: string[] = [];
@@ -119,29 +150,40 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
       });
     }
     for (const s of p.scenes) {
-      const files = captureFiles(media, s.capture, f);
-      const meta: CaptureMeta = JSON.parse(readFileSync(files.meta, "utf8"));
-      if (meta.version !== META_VERSION) throw new VideoMillError(`capture ${s.capture} @${f} predates meta v${META_VERSION} (text runs) — run \`videomill record ${slug} --force\``);
       const t = timeScene(s, audio[s.id].map((a) => a.sec), FPS);
       const durationInFrames = Math.ceil(t.seconds * FPS);
       const phrases: PhraseClip[] = t.phrases.map((ph, i) => ({ audio: audio[s.id][i].file, caption: ph.caption, start: ph.start, end: ph.end }));
-      const props = {
-        image: `${s.capture}-${f}.png`,
-        imageWidth: meta.width,
-        segments: planCamera(t.scene, f, meta, t.seconds, FPS),
-        phrases,
-        font: textFont(brand),
-        durationInFrames,
-      };
       const clip = join(out, "scenes", `${s.id}-${f}.mp4`);
-      const inputs = { props, img: stamps.get(`record ${s.capture} ${f}`), brand: brandStamp[brand.id], code };
-      await step(stamps, `render ${s.id} ${f}`, inputs, [clip],
-        () => renderClip(f, { comp: "PageCamera", props } satisfies Clip, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
-        opts.force && (!opts.scene || opts.scene === s.id));
+      let segments: Timeline["scenes"][number]["segments"] = [];
+      let area: Timeline["scenes"][number]["area"];
+      if (t.scene.kind === "page-scroll") {
+        const page = pageScene(t.scene, f);
+        segments = planCamera(t.scene, f, page.meta, t.seconds, FPS, page.area);
+        area = page.area;
+        const props: PageCameraProps = {
+          image: page.image, imageWidth: page.meta.width, segments, phrases, font: textFont(brand),
+          chrome: page.chrome, background: brand.colors.background, popups: page.popups(popupsOf(t.scene, FPS)), durationInFrames,
+        };
+        const inputs = { props, img: page.stamp, brand: brandStamp[brand.id], code };
+        await step(stamps, `render ${s.id} ${f}`, inputs, [clip],
+          () => renderClip(f, { comp: "PageCamera", props } satisfies Clip, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
+          opts.force && (!opts.scene || opts.scene === s.id));
+      } else {
+        const sc = t.scene;
+        const props: SceneCardProps = sc.kind === "title"
+          ? { variant: "title", brand: cardBrand(brand), text: sc.text, phrases, durationInFrames }
+          : { variant: "badges", brand: cardBrand(brand), items: sc.items, phrases, durationInFrames };
+        await step(stamps, `render ${s.id} ${f}`, { props, brands: brandStamp, code }, [clip],
+          () => renderClip(f, { comp: "SceneCard", props } satisfies Clip, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
+          opts.force && (!opts.scene || opts.scene === s.id));
+      }
       clips.push(clip);
       renders.push(stamps.get(`render ${s.id} ${f}`));
       for (const ph of phrases) if (ph.caption) cues.push({ start: offset + ph.start / FPS, end: offset + ph.end / FPS, text: ph.caption });
-      laid.push({ id: s.id, capture: s.capture, offset: frames, segments: props.segments, phrases: t.phrases.map(({ caption, start, end }) => ({ caption, start, end })) });
+      laid.push({
+        id: s.id, capture: s.kind === "page-scroll" ? s.capture : undefined, view: s.kind === "page-scroll" ? s.view : undefined, area,
+        offset: frames, segments, phrases: t.phrases.map(({ caption, start, end }) => ({ caption, start, end })),
+      });
       offset += durationInFrames / FPS;
       frames += durationInFrames;
     }

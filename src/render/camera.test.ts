@@ -77,3 +77,19 @@ test("segments carry the anchor they frame (`focus`) for caption QA", () => {
   ] });
   assert.deepEqual(planCamera(s, "9x16", meta, 4, FPS).map((g) => g.focus), ["h2#a", "#card", undefined, "h2#a"]);
 });
+
+test("in a window frame (v1.J) the view takes the footage area's aspect and zooms centre in its clear part", () => {
+  const area = { x: 24, y: 364, w: 1032, h: 1556 }; // 9x16 browser window: bar ends at 364
+  const [hold] = planCamera(scene({ shots: [{ kind: "hold", seconds: 1 }] }), "9x16", meta, 1, FPS, area);
+  assert.equal(hold.to.w, 1080); // full page width, drawn 1032 px wide
+  const [z] = planCamera(scene({ shots: [{ kind: "zoom", seconds: 1, target: "#card", fill: 0.8 }] }), "9x16", meta, 1, FPS, area);
+  const k = area.w / z.to.w; // output px per image px
+  const cy = area.y + (3000 + 150 - z.to.y) * k; // card centre on screen
+  assert.ok(Math.abs(cy - (364 + 1025) / 2) < 1, `centred between the bar and the caption strip (got ${cy})`);
+});
+
+test("a popup shot holds the camera (v1.J)", () => {
+  const [a, b] = planCamera(scene({ shots: [{ kind: "pan", seconds: 1, to: "h2#a" }, { kind: "popup", seconds: 1 }] }), "9x16", meta, 2, FPS);
+  assert.deepEqual(b.from, a.to);
+  assert.deepEqual(b.to, a.to);
+});

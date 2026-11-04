@@ -25,3 +25,30 @@ test("publish text is part of what gets approved; approval metadata is not", () 
   p.publish = { title: "T", description: "D", hashtags: [], channels: ["youtube"], utm: { medium: "social", campaign: "c", content: "t" } };
   assert.notEqual(approvalHash(p), h);
 });
+
+test("a capture may record an extension's popup and outputs (v1.J); bad yields are rejected", () => {
+  const ext = { name: "save-page-pdf-md", outputs: [{ id: "markdown", click: "Save as Markdown", yields: "download" }, { id: "pdf", click: "Save as PDF", yields: "page" }] };
+  const p = Project.parse({ ...base(), captures: [{ id: "page", url: "https://example.com/", extension: ext }] });
+  assert.deepEqual(p.captures[0].extension, ext);
+  assert.notEqual(approvalHash(p), approvalHash(base())); // what gets recorded is approved
+  const bad = Project.safeParse({ ...base(), captures: [{ id: "page", url: "https://example.com/", extension: { ...ext, outputs: [{ id: "x", click: "Go", yields: "file" }] } }] });
+  assert.equal(bad.success, false);
+});
+
+test("v1.J scenes: `view` and popup shots need the capture's extension; title/badges cards parse", () => {
+  const ext = { name: "e", outputs: [{ id: "markdown", click: "Save as Markdown", yields: "download" }] };
+  const page = { id: "s", kind: "page-scroll", capture: "page", narration: "", caption: "" };
+  const withExt = (scenes: object[]) => Project.safeParse({ ...base(), captures: [{ id: "page", url: "https://example.com/", extension: ext }], scenes });
+  assert.equal(withExt([{ ...page, view: "markdown", frame: "editor", narration: "x", caption: "x" }]).success, true);
+  assert.equal(withExt([{ ...page, view: "pdf", narration: "x", caption: "x" }]).success, false); // no such output
+  assert.equal(withExt([{ ...page, shots: [{ kind: "popup", state: "markdown", say: "Saved." }] }]).success, true);
+  assert.equal(withExt([{ ...page, shots: [{ kind: "popup", state: "nope", say: "x" }] }]).success, false);
+  const noExt = Project.safeParse({ ...base(), scenes: [{ ...page, shots: [{ kind: "popup", say: "x" }] }] });
+  assert.equal(noExt.success, false); // popup without an extension
+  const cards = withExt([
+    { id: "t", kind: "title", text: "Save any page.", narration: "Save any page.", caption: "" },
+    { id: "b", kind: "badges", items: [{ icon: "shield", label: "Runs locally" }], narration: "Runs locally.", caption: "" },
+  ]);
+  assert.equal(cards.success, true);
+  assert.equal(withExt([{ id: "b", kind: "badges", items: [{ icon: "rocket", label: "x" }], narration: "", caption: "" }]).success, false);
+});
