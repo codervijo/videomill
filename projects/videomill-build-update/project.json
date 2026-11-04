@@ -12,8 +12,8 @@
   ],
   "approval": {
     "status": "approved",
-    "approvedAt": "2026-11-04T06:46:37.187Z",
-    "hash": "d161a603c10ec950"
+    "approvedAt": "2026-11-04T06:58:58.182Z",
+    "hash": "2025f6e8e686422e"
   },
   "captures": [
     {
@@ -130,5 +130,22 @@
     "headline": "Explore products",
     "url": "lamill.io/products",
     "say": "Explore the products at lamill.io."
+  },
+  "publish": {
+    "title": "VideoMill Made This Video — Building LaMill in Public",
+    "description": "LaMill is an engineering studio that builds and runs useful tools for real work, each on its own site. VideoMill is LaMill's tool for making their videos: it records the real page, adds voice and captions, and renders both formats from a script and storyboard we approve.\n\nExplore the products: https://lamill.io/products",
+    "hashtags": [
+      "#buildinpublic",
+      "#LaMill"
+    ],
+    "channels": [
+      "youtube",
+      "x"
+    ],
+    "utm": {
+      "medium": "video",
+      "campaign": "build-in-public",
+      "content": "videomill-build-update"
+    }
   }
 }

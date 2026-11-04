@@ -160,3 +160,5 @@
 > make the clips bigger, run them behind the caption band
 
 > export and commit v1.M and push
+
+> approve videomill-build-update and export, commit, push

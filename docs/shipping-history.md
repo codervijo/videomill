@@ -29,7 +29,7 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
   - **OffthreadVideo frame cache capped at 256 MB.** The default (~1.5 GB) stalled 4 parallel tabs for ~50 s near frame 110, causing EPIPE and timeouts. Found in a spike; v1.L's concurrency-1 patch is removed. `cutClip()` stages just the span a clip plays.
   - **9:16 clips run behind the caption band (operator: bigger clips).** They're about 830 px wide instead of about 400, sized so the clip's own caption band sits behind this video's band. That also removes the double captions.
   - A silent 1.2 s pan broke the silence check; the pan now runs during its line.
-- **Real run:** the operator approved (hash `d161a603c10ec950`) → render → `qa` passed both formats (−14.0 LUFS, 27.2 s) → exported.
+- **Real run:** the operator approved (hash `d161a603c10ec950`) → render → `qa` passed both formats (−14.0 LUFS, 27.2 s). `export` then refused: the project had no `publish` block. One was drafted after the v1.M commit (title "VideoMill Made This Video — Building LaMill in Public", #buildinpublic #LaMill). The operator re-approved (hash `2025f6e8e686422e`) → render (the video is unchanged) → `qa` passed → exported.
 - **Tier v1 complete:** lamillrentals.com end to end, the Fiverr benchmark remake, and the first build-in-public video.
 
 ## v1.L — New footage: `clip` scene + local-file captures (shipped 2026-11-03)
