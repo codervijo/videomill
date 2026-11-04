@@ -134,3 +134,5 @@
 > and it is "la mill" "dot" "i" "o" and not "io"
 
 > export and commit and push
+
+> commit the prompt log and push
