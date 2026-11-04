@@ -114,3 +114,5 @@
 > approve save-page-pdf-md and render, qa, show me
 
 > commit v1.J and push. i think that video is perfect and i am quite dumbfounded at what just happened
+
+> commit the prompt log and push
