@@ -98,3 +98,11 @@
 > thats perfect now
 
 > commit the prompt log and push
+
+> start v1.J
+
+> go with these and where does it say "built by Lamill", can you not change the spelling? just answer dont change anything yet
+
+> give me a very short prompt for agent to fix it in tabmill templates and rebuild the extension
+
+> commit the prompt log and push - ignore tabmill's area of work and you focus on your side.
