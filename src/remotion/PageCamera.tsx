@@ -46,10 +46,6 @@ export const PageCamera: React.FC<PageCameraProps> = ({ image, imageWidth, segme
   const area = layout?.area ?? { x: 0, y: 0, w: width, h: height };
   const v = viewAt(frame, segments);
   const scale = area.w / v.w;
-  const band = captionBand(f, width, height);
-  const top = pageBottom(f, width, height); // the camera frames content above this
-  const end = stripBottom(f, width, height);
-  const strip = `linear-gradient(rgba(255,255,255,0) 0px, #ffffff ${band.top - top}px, #ffffff ${end < height ? band.bottom - top : end - top}px, rgba(255,255,255,${end < height ? 0 : 1}) 100%)`;
 
   return (
     <AbsoluteFill style={{ backgroundColor: chrome ? background ?? "#ffffff" : "#ffffff", overflow: "hidden" }}>
@@ -71,8 +67,7 @@ export const PageCamera: React.FC<PageCameraProps> = ({ image, imageWidth, segme
           <Popup clip={p} />
         </Sequence>
       ))}
-      {/* Caption strip (v1.I): fades in below the camera's clear area; on 9:16 it's a band with footage below it. */}
-      <div style={{ position: "absolute", left: 0, width, top, height: end - top, background: strip }} />
+      <CaptionStrip />
       {phrases.map((p, i) => (
         <Sequence key={i} from={p.start} durationInFrames={p.end - p.start} layout="none">
           {p.caption && <Caption text={p.caption} vertical={height > width} font={font} />}
@@ -81,6 +76,17 @@ export const PageCamera: React.FC<PageCameraProps> = ({ image, imageWidth, segme
       ))}
     </AbsoluteFill>
   );
+};
+
+/** Caption strip (v1.I): fades in below the camera's clear area; on 9:16 it's a band with footage below it. */
+export const CaptionStrip: React.FC = () => {
+  const { width, height } = useVideoConfig();
+  const f = height > width ? "9x16" : "16x9";
+  const band = captionBand(f, width, height);
+  const top = pageBottom(f, width, height);
+  const end = stripBottom(f, width, height);
+  const strip = `linear-gradient(rgba(255,255,255,0) 0px, #ffffff ${band.top - top}px, #ffffff ${end < height ? band.bottom - top : end - top}px, rgba(255,255,255,${end < height ? 0 : 1}) 100%)`;
+  return <div style={{ position: "absolute", left: 0, width, top, height: end - top, background: strip }} />;
 };
 
 /** Browser or editor chrome: rounded window, title bar with the URL (or file name). Drawn, not captured. */

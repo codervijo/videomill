@@ -4,7 +4,7 @@
   "type": "build-in-public",
   "brand": "lamill",
   "source": {
-    "url": "https://github.com/codervijo/videomill"
+    "url": "https://lamill.io/products"
   },
   "formats": [
     "16x9",
@@ -12,26 +12,79 @@
   ],
   "approval": {
     "status": "approved",
-    "approvedAt": "2026-11-04T06:12:47.921Z",
-    "hash": "32693bdabb94f192"
+    "approvedAt": "2026-11-04T06:46:37.187Z",
+    "hash": "d161a603c10ec950"
   },
   "captures": [
     {
-      "id": "storyboard",
-      "file": "out/save-page-pdf-md/storyboard.html"
+      "id": "home",
+      "url": "https://lamill.io/"
     },
     {
-      "id": "sheet",
-      "file": "out/save-page-pdf-md/save-page-pdf-md-16x9-contact.png"
+      "id": "products",
+      "url": "https://lamill.io/products"
+    },
+    {
+      "id": "storyboard",
+      "file": "out/save-page-pdf-md/storyboard.html"
     }
   ],
   "scenes": [
     {
-      "id": "intro",
+      "id": "home",
+      "kind": "page-scroll",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "capture": "home",
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "hold",
+          "say": "LaMill is an engineering studio.",
+          "caption": "LaMill · an engineering studio"
+        },
+        {
+          "kind": "zoom",
+          "seconds": 0.8,
+          "target": "h1",
+          "fill": 0.9,
+          "say": "Build. Deploy. Advance."
+        }
+      ]
+    },
+    {
+      "id": "products",
+      "kind": "page-scroll",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "capture": "products",
+      "frame": "browser",
+      "shots": [
+        {
+          "kind": "zoom",
+          "seconds": 0.8,
+          "target": "h1",
+          "fill": 0.9,
+          "say": "It makes useful tools for real work,",
+          "caption": "Useful tools for real work"
+        },
+        {
+          "kind": "pan",
+          "seconds": 1,
+          "to": "h2:has-text(\"Calculators\")",
+          "say": "products it builds and runs, each on its own site.",
+          "caption": "Each on its own site"
+        }
+      ]
+    },
+    {
+      "id": "videomill",
       "kind": "title",
-      "text": "VideoMill made this video.",
-      "narration": "VideoMill made this video.",
-      "caption": "VideoMill made this video.",
+      "text": "LaMill built VideoMill.",
+      "narration": "And LaMill built VideoMill to make their videos.",
+      "caption": "LaMill built VideoMill to make their videos",
       "minSeconds": 2
     },
     {
@@ -44,43 +97,38 @@
       "frame": "browser",
       "shots": [
         {
-          "kind": "hold",
-          "say": "I approve a script and a storyboard,",
-          "caption": "I approve a script and storyboard"
-        },
-        {
           "kind": "pan",
-          "to": "+1",
-          "say": "scene by scene,",
-          "caption": "Scene by scene"
+          "to": "+0.5",
+          "say": "Each video starts as a script and storyboard we approve.",
+          "caption": "A script and storyboard we approve"
         }
       ]
     },
     {
-      "id": "sheet",
-      "kind": "page-scroll",
-      "narration": "",
-      "caption": "",
-      "minSeconds": 1,
-      "capture": "sheet",
-      "frame": "browser",
-      "shots": [
-        {
-          "kind": "hold",
-          "say": "it renders every frame,",
-          "caption": "It renders every frame"
-        }
-      ]
-    },
-    {
-      "id": "clip",
+      "id": "extension",
       "kind": "clip",
       "project": "save-page-pdf-md",
       "export": "20261104T055117Z",
       "from": 4,
-      "narration": "and exports videos like this one.",
-      "caption": "And exports videos like this one",
+      "narration": "Then it records the real page, adds voice and captions, and renders both formats,",
+      "caption": "Real footage, voice, captions, both formats",
+      "minSeconds": 2
+    },
+    {
+      "id": "rentals",
+      "kind": "clip",
+      "project": "lamillrentals-promo",
+      "export": "20261104T030319Z",
+      "from": 0,
+      "narration": "like this one for LaMill Rentals.",
+      "caption": "Like this one for LaMill Rentals",
       "minSeconds": 2
     }
-  ]
+  ],
+  "endCard": {
+    "tagline": "Useful tools for real work",
+    "headline": "Explore products",
+    "url": "lamill.io/products",
+    "say": "Explore the products at lamill.io."
+  }
 }

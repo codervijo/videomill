@@ -50,8 +50,10 @@ export async function renderClip(
     codec: "h264",
     outputLocation: outPath,
     inputProps: props,
-    // A clip scene (v1.L) decodes a video per frame; parallel renderers crashed the frame extractor (EPIPE).
-    concurrency: clip.comp === "SceneCard" && clip.props.variant === "clip" ? 1 : 4,
+    concurrency: 4,
+    // Clip scenes (v1.L): the OffthreadVideo frame cache defaults to ~1.5 GB here. With 4 tabs it
+    // stalled ~50 s near frame 110 once full (EPIPE / delayRender timeouts); 256 MB: 150 frames in 7 s.
+    offthreadVideoCacheSizeInBytes: 256 * 1024 * 1024,
     enforceAudioTrack: true, // silent cards still need an audio stream for concat
     chromiumOptions: { enableMultiProcessOnLinux: true },
     onProgress: ({ progress }) => {
@@ -59,6 +61,17 @@ export async function renderClip(
       if (pct !== last) { last = pct; onProgress?.(pct); }
     },
   });
+}
+
+/**
+ * A clip scene's span (v1.L), cut from a VideoMill export without audio
+ * (narration plays over it), so the staged file is exactly what plays.
+ */
+export function cutClip(src: string, fromSec: number, seconds: number, out: string): void {
+  execFileSync("ffmpeg", [
+    "-y", "-loglevel", "error", "-ss", String(fromSec), "-i", src, "-t", String(seconds + 0.5),
+    "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-pix_fmt", "yuv420p", out,
+  ]);
 }
 
 /** One frame per second, tiled — a quick visual check of a render. */

@@ -4,9 +4,9 @@
 import { AbsoluteFill, Audio, OffthreadVideo, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { SAFE_ZONE } from "../constants";
 import type { CardBrand } from "./BrandCard";
-import { pageBottom } from "./caption";
+import { captionBand, pageBottom, stripBottom } from "./caption";
 import { fontStack, useFonts } from "./fonts";
-import { Caption, type PhraseClip } from "./PageCamera";
+import { Caption, CaptionStrip, type PhraseClip } from "./PageCamera";
 
 export type BadgeIcon = "shield" | "cloud-off" | "check" | "lock" | "download" | "file";
 
@@ -40,24 +40,37 @@ export const SceneCard: React.FC<SceneCardProps> = (props) => {
   const bottom = pageBottom(f, width, height);
 
   if (props.variant === "clip") {
-    // Fit the clip into the clear area: safe-zone top (at least a margin) down to the caption strip.
+    // Fit the clip from the safe-zone top (at least a margin) down to the caption strip — or, where
+    // the strip is a band with footage below it (9:16), to the frame's bottom margin, behind the band.
     const m = 40 * u;
     const top = Math.max(z.top, m);
-    const a = props.videoWidth / props.videoHeight;
-    const w = Math.min(width - 2 * m, (bottom - top) * a);
-    const h = w / a;
+    const behind = stripBottom(f, width, height) < height;
+    const floor = behind ? height - m : bottom;
+    const { videoWidth: vw, videoHeight: vh } = props;
+    let k = Math.min((width - 2 * m) / vw, (floor - top) / vh); // output px per clip px
+    let y = top + (floor - top - vh * k) / 2;
+    if (behind) {
+      // The clip is a VideoMill video with its own captions: size and place it so its caption
+      // band sits behind this video's band, instead of peeking out below it.
+      const clipBand = captionBand(vh > vw ? "9x16" : "16x9", vw, vh);
+      const kb = Math.min(k, (captionBand(f, width, height).bottom - top) / clipBand.bottom); // inside the band's solid part, not its fade
+      if (top + clipBand.top * kb >= bottom) { k = kb; y = top; }
+    }
+    const w = vw * k;
+    const h = vh * k;
     const s = spring({ frame, fps, config: { damping: 200 }, durationInFrames: Math.round(fps * 0.3) });
     return (
       <AbsoluteFill style={{ backgroundColor: brand.colors.background }}>
         <div
           style={{
-            position: "absolute", left: (width - w) / 2, top: top + (bottom - top - h) / 2, width: w, height: h,
+            position: "absolute", left: (width - w) / 2, top: y, width: w, height: h,
             borderRadius: 20 * u, overflow: "hidden", boxShadow: `0 ${12 * u}px ${48 * u}px rgba(0,0,0,0.45)`, border: `${2 * u}px solid ${brand.colors.text}22`,
             opacity: s, transform: `scale(${0.96 + 0.04 * s})`,
           }}
         >
           <OffthreadVideo src={staticFile(props.video)} startFrom={props.startFrom} muted style={{ width: "100%", height: "100%" }} />
         </div>
+        {behind && <CaptionStrip />}
         <Phrases phrases={props.phrases} vertical={vertical} brand={brand} />
       </AbsoluteFill>
     );

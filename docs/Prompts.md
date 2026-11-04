@@ -150,3 +150,13 @@
 > approve videomill-build-update and render, qa, show me
 
 > commit v1.L and push
+
+> videomill video is too short small and doesnt say anything about lamill.io - which isthe point
+
+> approve videomill-build-update and render, qa, show me
+
+> approve videomill-build-update and render, qa, show me
+
+> make the clips bigger, run them behind the caption band
+
+> export and commit v1.M and push

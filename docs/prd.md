@@ -87,19 +87,11 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 | v1.J | ✅ done 2026-11-03 | Extension capture + new scene kinds — record the unpacked extension's real popup, Markdown and PDF output; title card, browser frame, popup overlay, file view, badges |
 | v1.K | ✅ done 2026-11-03 | Benchmark: reproduce the Fiverr video's beats for `save-page-pdf-md` in 16:9 + 9:16, voice-over, `qa` + export |
 | v1.L | ✅ done 2026-11-03 | New footage — `clip` scene (play an exported VideoMill video inside the frame) + local-file captures (storyboard HTML, contact sheets) |
-| v1.M | ⏳ planned | First lamill.io build-in-public video — build update "VideoMill made this video" |
+| v1.M | ✅ done 2026-11-03 | First lamill.io build-in-public video — build update "VideoMill made this video" |
 
 #### Design notes
 
-- **v1.M** — the build-update video.
-  - **Footage:** the public GitHub repo, a storyboard, contact sheets and clips from the lamillrentals and Save Page videos.
-  - **lamill.io page:** a lamill.io page about VideoMill is recorded if it's live by then. It's written in the lamill.io repo, not here.
-  - **Facts:** script facts come from this repo (PRD, shipping history, commits).
-  - **Carried from v1.L (2026-11-03):** the demo `projects/videomill-build-update/` (4 scenes, 11.6 s) is this video's starting point. It still needs:
-    - enough script for the 15 s minimum;
-    - its own end card (it shows LaMill's "Start a project");
-    - truer wording than "it renders every frame" (a contact sheet is a sample of frames);
-    - a decision on the clip's own burned-in captions showing above this video's caption.
+(None in progress — v1 is complete. Later tiers are listed under v1 above, not yet scoped.)
 
 ## 6. Conformance rules
 

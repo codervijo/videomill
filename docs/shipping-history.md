@@ -12,6 +12,26 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.M — First build-in-public video: "VideoMill made this video" (shipped 2026-11-03)
+
+- **v1.M** — the build-update video.
+  - **Footage:** the public GitHub repo, a storyboard, contact sheets and clips from the lamillrentals and Save Page videos.
+  - **lamill.io page:** a lamill.io page about VideoMill is recorded if it's live by then. It's written in the lamill.io repo, not here.
+  - **Facts:** script facts come from this repo (PRD, shipping history, commits).
+  - **Carried from v1.L (2026-11-03):** the demo `projects/videomill-build-update/` (4 scenes, 11.6 s) is this video's starting point. It still needs:
+    - enough script for the 15 s minimum;
+    - its own end card (it shows LaMill's "Start a project");
+    - truer wording than "it renders every frame" (a contact sheet is a sample of frames);
+    - a decision on the clip's own burned-in captions showing above this video's caption.
+- **Reframed by the operator (2026-11-03):** the demo was "too short, small and doesn't say anything about lamill.io — which is the point". The video now leads with lamill.io's live home and products pages (zoomed to their headings, in a browser window), then shows VideoMill as LaMill's tool for its videos: the approved storyboard, then the Save Page and LaMill Rentals clips. It ends on its own card, "Useful tools for real work · Explore products · lamill.io/products". The contact-sheet scene and "renders every frame" were dropped.
+- **Copy sources:** lamill.io's home and products pages, and this repo.
+- **Fixes found on the way:**
+  - **OffthreadVideo frame cache capped at 256 MB.** The default (~1.5 GB) stalled 4 parallel tabs for ~50 s near frame 110, causing EPIPE and timeouts. Found in a spike; v1.L's concurrency-1 patch is removed. `cutClip()` stages just the span a clip plays.
+  - **9:16 clips run behind the caption band (operator: bigger clips).** They're about 830 px wide instead of about 400, sized so the clip's own caption band sits behind this video's band. That also removes the double captions.
+  - A silent 1.2 s pan broke the silence check; the pan now runs during its line.
+- **Real run:** the operator approved (hash `d161a603c10ec950`) → render → `qa` passed both formats (−14.0 LUFS, 27.2 s) → exported.
+- **Tier v1 complete:** lamillrentals.com end to end, the Fiverr benchmark remake, and the first build-in-public video.
+
 ## v1.L — New footage: `clip` scene + local-file captures (shipped 2026-11-03)
 
 - **v1.L / v1.M (operator, 2026-11-03):** the first build-in-public video is a build update, "VideoMill made this video", using all footage ideas. The footage VideoMill lacks is built first (v1.L); the video is v1.M.

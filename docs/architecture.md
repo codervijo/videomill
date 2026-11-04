@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.L shipped (2026-11-03); v1.M (first build-in-public video) next. Sections still marked *projected* are firmed up by the phase noted.
+Status: v1 complete — v1.M shipped (2026-11-03). Later tiers are not scoped yet. Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.L: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.M):
+Built through v1.M: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The tree below is all built:
 
 ```
 videomill/
@@ -167,8 +167,8 @@ Playwright launches Chromium with a persistent context and the unpacked extensio
   - A browser frame's address bar shows the repo path.
 - **Clip scenes** play another project's exported video in the `SceneCard` composition (`variant: "clip"`):
   - `<OffthreadVideo>`, muted under the narration, from `from` seconds;
-  - fitted into the clear area (safe-zone top, or at least a 40 px margin, down to the caption strip) on the brand background, with rounded corners and a 0.3 s settle-in;
-  - `render` copies the source to `media/clip-<project>-<export>-<format>.mp4` (Remotion's publicDir) and stops with `✗` if the source is missing or shorter than `from` plus the scene length;
+  - fitted from the safe-zone top (or at least a 40 px margin) down to the caption strip, on the brand background, with rounded corners and a 0.3 s settle-in. *(v1.M, operator)* Where the strip is a band with footage below it (9:16), the clip runs down to the bottom margin behind the band, about twice as wide. It's sized and placed so the clip's own caption band (a VideoMill video, same `captionBand()` geometry) sits behind this video's band, so the clip's burned-in captions are hidden;
+  - `render` cuts the span it plays (`cutClip()`: `from` plus the scene length, no audio) to `media/clip-<project>-<export>-<format>-<from>s-<ms>ms.mp4` in Remotion's publicDir, before the first render. It stops with `✗` if the source is missing or too short;
   - `qa` treats it like a card: no capture, only the safe-zone check.
   - The clip is VideoMill's own output, so it counts as real footage.
 
@@ -342,11 +342,11 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-None in progress. v1.M (the build-update video "VideoMill made this video") is next.
+None in progress. v1 is complete; later tiers (`prd.md § 5` v1 intro) are not scoped yet.
 
 ## 9. Risks
 
-- **Clip scenes render at concurrency 1** (v1.L). With 4 renderers, Remotion's frame extractor crashed (EPIPE, then a 28 s `delayRender` timeout) while decoding the same clip. Concurrency 1 avoided it, but the root cause isn't confirmed. Clip scenes render more slowly; revisit if they get long.
+- **OffthreadVideo frame cache is capped at 256 MB** (v1.M). The default (~1.5 GB, from free memory) made 4 parallel tabs stall ~50 s near frame 110 of a 1080p clip, causing EPIPE and `delayRender` timeouts. Root-caused in a spike (`.cache/spike/clip-spike.ts`): the same clip took 21 s at concurrency 1, stalled at 4, and took 7 s at 4 with the cap. v1.L's concurrency-1 patch is removed. Revisit the cap for 4K sources.
 - **Extension popup capture** (§ 2, v1.J) may not match what a real toolbar click shows (popup chrome, positioning). Fallback: compose the popup page into a browser-frame SVG in Remotion.
 - **`qa` caption geometry is measured, not captured.** Boxes come from Playwright Chromium with the render's styles; Remotion renders with its own Chrome Headless Shell, so glyph metrics can differ by a pixel or so. The cover check samples each overlapping segment's start and end view, not every frame of a move.
 - **Kokoro on CPU** — measured in v1.E at roughly real time per phrase in the container (1.8 s audio in 2.0 s; 2.4 s in 1.4 s). Voice quality vs. the Fiverr benchmark is still unjudged. Mitigation: provider interface (ADR-0004).

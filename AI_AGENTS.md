@@ -29,7 +29,7 @@ All TypeScript on Node 22 + pnpm (ADR-0002): Remotion 4.x (composition + render)
 | v1.J | ✅ | Extension capture (real popup, .md, PDF) + new scene kinds |
 | v1.K | ✅ | Benchmark: reproduce the Fiverr video for `save-page-pdf-md` |
 | v1.L | ✅ | New footage: `clip` scene + local-file captures |
-| v1.M | ⏳ | First build-in-public video: "VideoMill made this video" |
+| v1.M | ✅ | First build-in-public video: "VideoMill made this video" |
 
 ## Versioning convention
 

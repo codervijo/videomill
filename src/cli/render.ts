@@ -1,5 +1,5 @@
 // `record` and `render` — the per-scene pipeline (docs/architecture.md § 2).
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { CAPTURE, DEFAULT_VOICE, FORMATS, FPS, LOUDNESS, QA, type Format } from "../constants.js";
 import { brandHash, cardBrand, stageBrand, textFont } from "../brand/cards.js";
@@ -20,7 +20,7 @@ import { captureFiles, META_VERSION, recordCapture, type CaptureMeta } from "../
 import { captureSource } from "../record/source.js";
 import { EXT_META_VERSION, extensionBuildHash, extensionFiles, recordExtension, type ExtensionMeta } from "../record/extension.js";
 import { planCamera } from "../render/camera.js";
-import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
+import { compositionHash, concatClips, contactSheet, cutClip, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
 import { phrasesOf, popupsOf, timeScene } from "../render/timeline.js";
 import { getTtsProvider, type TtsProvider } from "../tts/provider.js";
 import { speakable } from "../tts/speakable.js";
@@ -134,7 +134,9 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     return { image: out ? out.view : `${s.capture}-${f}.png`, meta, chrome, area, popups, stamp };
   };
 
-  const clipName = (s: Extract<AnyScene, { kind: "clip" }>, f: Format) => `clip-${s.project}-${s.export}-${s.format ?? f}.mp4`;
+  // The span a clip scene plays, cut out on its own: from + scene length, both pinned in the name.
+  const clipName = (s: Extract<AnyScene, { kind: "clip" }>, f: Format, seconds: number) =>
+    `clip-${s.project}-${s.export}-${s.format ?? f}-${s.from}s-${Math.round(seconds * 1000)}ms.mp4`;
   /**
    * Copy a clip scene's source video into the media dir (Remotion's publicDir) and return its name there.
    * Export folders are written once and never changed, so the folder name pins the footage (v1.L).
@@ -144,8 +146,8 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
     if (!existsSync(src)) throw new VideoMillError(`scene ${s.id}: no ${relative(process.cwd(), src)} — export ${s.project} first, or fix \`export\``);
     const length = probeDurationSec(src);
     if (s.from + seconds > length + 0.05) throw new VideoMillError(`scene ${s.id}: needs ${(s.from + seconds).toFixed(1)}s of ${s.project}'s ${s.format ?? f} video, which is ${length.toFixed(1)}s — lower \`from\` or shorten the narration`);
-    const name = clipName(s, f);
-    if (!existsSync(join(media, name))) { mkdirSync(media, { recursive: true }); copyFileSync(src, join(media, name)); }
+    const name = clipName(s, f, seconds);
+    if (!existsSync(join(media, name))) { mkdirSync(media, { recursive: true }); cutClip(src, s.from, seconds, join(media, name)); }
     return name;
   };
 
@@ -201,7 +203,7 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
         const props: SceneCardProps = sc.kind === "title"
           ? { variant: "title", brand: cardBrand(brand), text: sc.text, phrases, durationInFrames }
           : sc.kind === "badges" ? { variant: "badges", brand: cardBrand(brand), items: sc.items, phrases, durationInFrames }
-          : { variant: "clip", brand: cardBrand(brand), video: clipName(sc, f), videoWidth: FORMATS[sc.format ?? f].width, videoHeight: FORMATS[sc.format ?? f].height, startFrom: Math.round(sc.from * FPS), phrases, durationInFrames };
+          : { variant: "clip", brand: cardBrand(brand), video: clipName(sc, f, t.seconds), videoWidth: FORMATS[sc.format ?? f].width, videoHeight: FORMATS[sc.format ?? f].height, startFrom: 0, phrases, durationInFrames };
         await step(stamps, `render ${s.id} ${f}`, { props, brands: brandStamp, code }, [clip],
           () => renderClip(f, { comp: "SceneCard", props } satisfies Clip, media, clip, (pct) => info(`${s.id} ${f} ${pct}%`)),
           opts.force && (!opts.scene || opts.scene === s.id));
