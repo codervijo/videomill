@@ -19,14 +19,24 @@ export function captionBand(f: Format, width: number, height: number): { top: nu
   return { top: bottom - (2 * FONT[v] * LINE + 2 * PAD_Y), bottom };
 }
 
-const STRIP_GAP = 24; // page footage ends this far above the caption band
+const STRIP_GAP = 24; // the strip reaches this far past the caption band, fading
 
 /**
- * Bottom of the page footage, in output px (v1.I): below it is a solid strip
- * the captions sit in, so a caption never hides page content.
+ * Top of the caption strip, in output px (v1.I): the camera frames content
+ * above it, and the solid strip holds the captions, so a caption never hides
+ * framed page content.
  */
 export function pageBottom(f: Format, width: number, height: number): number {
   return captionBand(f, width, height).top - STRIP_GAP;
+}
+
+/**
+ * Bottom of the caption strip. Where the safe zone reserves a bottom area
+ * (9:16, platform UI), the strip is a band and page footage shows again below
+ * it, so the frame isn't half empty; otherwise it runs to the frame's edge.
+ */
+export function stripBottom(f: Format, width: number, height: number): number {
+  return SAFE_ZONE[f].bottom > 0 ? captionBand(f, width, height).bottom + STRIP_GAP : height;
 }
 
 /** Outer = positioned strip inside the safe zone; inner = the visible box. Lengths in px strings. */

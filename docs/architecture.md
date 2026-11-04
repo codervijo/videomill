@@ -64,7 +64,7 @@ Rules:
 - **Text runs (v1.I, meta version 3):** the recorder also writes the device-pixel box of every visible non-empty text node (`text: [{text, box}]`), so `qa` can see page text the script never names. Captures from meta version 2 fail `render` with `✗ … record --force`.
 - The recorder scrolls the whole page once, so lazy images load (Playwright records this as `scroll-<f>.webm`). Then it returns to the top and takes a full-page PNG.
 - The scene (`src/remotion/PageCamera.tsx`) moves a virtual camera over that PNG along segments planned from the scene's shots (next section). Phrase captions and narration play on top (§ Phrases and captions).
-- **Caption strip (v1.I, both formats):** page footage ends at `pageBottom()` (`remotion/caption.ts`: caption band top − 24 px) and fades out over those 24 px into a solid white strip, which holds the captions. So a caption never hides page content. On 16:9 the strip is the bottom ~26% of the frame; on 9:16 it overlaps the platform UI zone below the safe area anyway. Chosen by the operator (2026-10-20) after `qa` found captions covering page text no shot could frame around (the Tables card, hero buttons, the phone line).
+- **Caption strip (v1.I):** a white strip fades in from `pageBottom()` (`remotion/caption.ts`: caption band top − 24 px) and holds the captions. The camera frames content above it, so a caption never hides framed page content. On 16:9 the strip runs to the frame's bottom edge (~26% of the frame). On 9:16 it's a band ending at `stripBottom()` (caption band bottom + 24 px, fading out) and page footage shows again below it, in the platform-UI zone: a strip to the bottom edge left ~40% of the 9:16 frame blank (operator, 2026-11-03). Captions stay centred in the safe zone, so on 9:16 they sit 72 px left of the frame centre (the safe zone keeps 192 px clear on the right for platform buttons, 48 px on the left). Chosen by the operator (2026-10-20) after `qa` found captions covering page text no shot could frame around (the Tables card, hero buttons, the phone line).
 - **Finding (2026-10-20):** a screenshot pan beats Playwright's own video for page content. Playwright's recording is low-bitrate VP8, while the PNG pan is pixel-exact and deterministic. The `.webm` is kept as an artifact but not rendered. Interaction footage (clicks, popups) will still need real video capture (v1.J).
 
 ### Camera and shots (v1.D)
@@ -233,7 +233,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/export/manifest.ts` | `buildManifest()` (`videomill-export-v1`); tests in `manifest.test.ts` |
 | `src/cli/qa.ts` | `qa`, `qaInputs()`, `requireRendered()` |
 | `src/cli/export.ts` | `export`: gates, atomic folder write, `latest` symlink |
-| `src/remotion/caption.ts` | caption layout (`captionStyles()`, `captionBand()`, `pageBottom()`) shared by render, camera, storyboard and `qa` |
+| `src/remotion/caption.ts` | caption layout (`captionStyles()`, `captionBand()`, `pageBottom()`, `stripBottom()`) shared by render, camera, storyboard and `qa` |
 | `src/storyboard/build.ts` | storyboard HTML (segment stills per format + script) → PNG via Playwright |
 | `src/cli/render.ts` | `record` and `render`: the per-scene pipeline |
 

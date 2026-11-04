@@ -90,3 +90,9 @@
 > how far did we get on videomill?
 
 > commit the prd change and push and show me the video - open in chrome
+
+> video-16x9.mp4 looks good but video-9x16 looks odd - check latest screenshot
+
+> option 1, centre in safe zone
+
+> thats perfect now
