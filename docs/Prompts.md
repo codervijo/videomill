@@ -96,3 +96,5 @@
 > option 1, centre in safe zone
 
 > thats perfect now
+
+> commit the prompt log and push
