@@ -124,3 +124,5 @@
 > approve save-page-pdf-md and render, qa, show me
 
 > export and commit v1.K and push, almost perfect except for how it says "lamillio" as if its one waord - and it should "lamill" "dot" "io"
+
+> commit the prompt log and push
