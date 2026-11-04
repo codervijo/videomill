@@ -14,6 +14,15 @@ const id = z.string().regex(/^[a-z0-9][a-z0-9-]*$/, "lowercase letters, digits a
 // No `file` = rely on the renderer's system sans (Noto Sans in the container).
 const Font = z.object({ family: z.string().min(1), file: z.string().optional(), uppercase: z.boolean().default(false) }).strict();
 
+// The closing card. A project may override its brand's (v1.K).
+export const EndCard = z.object({
+  headline: z.string().min(1), // the CTA, in the site's own words
+  url: z.string().min(1), // shown as-is, e.g. "lamillrentals.com"
+  tagline: z.string().min(1).optional(), // v1.K: a line above the CTA, in the brand's own words
+  seconds: z.number().positive().default(2), // ~2 s (operator, v1.I; was 3)
+  say: z.string().min(1).optional(), // spoken over the card
+}).strict();
+
 export const Brand = z.object({
   schema: z.literal(BRAND_SCHEMA),
   id,
@@ -29,12 +38,7 @@ export const Brand = z.object({
   }).strict(),
   fonts: z.object({ text: Font, cta: Font.optional() }).strict(),
   voice: z.string().optional(), // TTS voice when the project sets none
-  endCard: z.object({
-    headline: z.string().min(1), // the CTA, in the site's own words
-    url: z.string().min(1), // shown as-is, e.g. "lamillrentals.com"
-    seconds: z.number().positive().default(2), // ~2 s (operator, v1.I; was 3)
-    say: z.string().min(1).optional(), // spoken over the card
-  }).strict().optional(),
+  endCard: EndCard.optional(),
   // Parent brand that presents this one: `signoff` + parent logo under this
   // brand's end-card CTA, and — only with `opener: true` (v1.I; off by default)
   // — a silent opener in the parent's look (parent logo + `intro`, then the site).

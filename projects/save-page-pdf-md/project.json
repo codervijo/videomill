@@ -12,8 +12,8 @@
   ],
   "approval": {
     "status": "approved",
-    "approvedAt": "2026-11-04T05:22:33.279Z",
-    "hash": "8400a6c5998e675a"
+    "approvedAt": "2026-11-04T05:35:22.684Z",
+    "hash": "211d319efd6ce788"
   },
   "captures": [
     {
@@ -57,16 +57,35 @@
         {
           "kind": "hold",
           "say": "Want just the article?"
-        },
+        }
+      ]
+    },
+    {
+      "id": "cleaner",
+      "kind": "title",
+      "text": "One click. A cleaner page.",
+      "narration": "One click. A cleaner page.",
+      "caption": "One click. A cleaner page.",
+      "minSeconds": 1.5
+    },
+    {
+      "id": "markdown",
+      "kind": "page-scroll",
+      "capture": "page",
+      "narration": "",
+      "caption": "",
+      "minSeconds": 1,
+      "frame": "browser",
+      "shots": [
         {
           "kind": "popup",
-          "say": "Click Save as Markdown,",
+          "say": "Save it as Markdown,",
           "caption": "Save it as Markdown"
         },
         {
           "kind": "popup",
           "state": "markdown",
-          "say": "and you get a clean Markdown file,",
+          "say": "and you get a clean .md file,",
           "caption": "A clean .md file"
         }
       ]
@@ -83,8 +102,8 @@
       "shots": [
         {
           "kind": "hold",
-          "say": "with the title, source link and date.",
-          "caption": "Title, source link and date"
+          "say": "with its title, source URL and the date you saved it.",
+          "caption": "Title, source URL and date"
         }
       ]
     },
@@ -100,8 +119,8 @@
         {
           "kind": "popup",
           "state": "pdf",
-          "say": "Or save it as a print-ready PDF.",
-          "caption": "Or save it as PDF"
+          "say": "Or save it as a PDF.",
+          "caption": "Or save it as a PDF"
         }
       ]
     },
@@ -117,8 +136,8 @@
       "shots": [
         {
           "kind": "hold",
-          "say": "One click, a cleaner page.",
-          "caption": "One click. A cleaner page."
+          "say": "A clean print view, without menus and sidebars.",
+          "caption": "No menus, no sidebars"
         }
       ]
     },
@@ -136,12 +155,44 @@
         },
         {
           "icon": "check",
-          "label": "Free to use"
+          "label": "Free"
         }
       ],
-      "narration": "It runs locally, and nothing is uploaded.",
+      "narration": "It runs locally. Page content never leaves your browser.",
       "caption": "Runs locally · nothing uploaded",
       "minSeconds": 2
+    },
+    {
+      "id": "outro",
+      "kind": "title",
+      "text": "Save smarter. Stay private.",
+      "narration": "Save smarter. Stay private.",
+      "caption": "Save smarter. Stay private.",
+      "minSeconds": 1.5
     }
-  ]
+  ],
+  "publish": {
+    "title": "Save Any Web Page as Markdown or PDF in One Click (Free Chrome Extension)",
+    "description": "Save the page you're reading as clean Markdown or a print-ready PDF with the free Save Page as Markdown or PDF Chrome extension. Runs locally — page content never leaves your browser.\n\nInstall free: https://chromewebstore.google.com/detail/aknmbookdcobogmhhnppjofghdjepice\nLearn more: https://lamill.io/extensions/save-page-pdf-md",
+    "hashtags": [
+      "#markdown",
+      "#chromeextension",
+      "#obsidian"
+    ],
+    "channels": [
+      "youtube",
+      "x"
+    ],
+    "utm": {
+      "medium": "video",
+      "campaign": "save-page-pdf-md",
+      "content": "save-page-pdf-md"
+    }
+  },
+  "endCard": {
+    "tagline": "Useful tools for real work",
+    "headline": "Install free",
+    "url": "lamill.io",
+    "say": "Install it free at lamill.io."
+  }
 }

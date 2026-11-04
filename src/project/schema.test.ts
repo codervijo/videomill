@@ -52,3 +52,10 @@ test("v1.J scenes: `view` and popup shots need the capture's extension; title/ba
   assert.equal(cards.success, true);
   assert.equal(withExt([{ id: "b", kind: "badges", items: [{ icon: "rocket", label: "x" }], narration: "", caption: "" }]).success, false);
 });
+
+test("a project's own end card (v1.K) is approved content", () => {
+  const end = { headline: "Install free", url: "lamill.io", tagline: "Useful tools for real work" };
+  const p = Project.parse({ ...base(), endCard: end });
+  assert.deepEqual(p.endCard, { ...end, seconds: 2 });
+  assert.notEqual(approvalHash(p), approvalHash(base()));
+});

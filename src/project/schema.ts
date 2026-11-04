@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { CHANNELS, FORMAT_IDS, VIDEO_TYPES } from "../constants.js";
+import { EndCard } from "../brand/schema.js";
 
 export const PROJECT_SCHEMA = "videomill-project-v1";
 
@@ -111,6 +112,7 @@ export const Project = z.object({
   }).strict().default({ status: "draft" }),
   captures: z.array(Capture).min(1),
   scenes: z.array(AnyScene).min(1),
+  endCard: EndCard.optional(), // v1.K: replaces the brand's end card for this video
   publish: z.object({
     title: z.string(),
     description: z.string(),
@@ -153,7 +155,7 @@ export type Shot = z.infer<typeof Shot>;
  * "edited since approval" until re-approved.
  */
 export function approvalHash(p: Project): string {
-  return createHash("sha256").update(JSON.stringify({ captures: p.captures, scenes: p.scenes, voice: p.voice, publish: p.publish })).digest("hex").slice(0, 16);
+  return createHash("sha256").update(JSON.stringify({ captures: p.captures, scenes: p.scenes, voice: p.voice, publish: p.publish, endCard: p.endCard })).digest("hex").slice(0, 16);
 }
 
 export type ApprovalState = "draft" | "approved" | "edited since approval";

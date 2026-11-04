@@ -2,11 +2,11 @@
 
 How this project is built. Mechanisms, schemas, modules, and integrations. The "HOW" companion to `docs/prd.md`'s "WHY / WHAT".
 
-Status: v1.J shipped (2026-11-03); v1.K (reproduce the Fiverr reference) next. Sections still marked *projected* are firmed up by the phase noted.
+Status: v1.K shipped (2026-11-03); v1.L (first build-in-public video) next. Sections still marked *projected* are firmed up by the phase noted.
 
 ## 1. Project layout
 
-Built through v1.J: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.K–v1.L):
+Built through v1.K: `Makefile`, `Makefile.local`, `package.json`, `src/{cli,pipeline,project,record,tts,remotion,render,brand,storyboard,qa,export}`, `.claude/skills/videomill-draft/`, `brands/`, `src/constants.ts`, `projects/<slug>/project.json`, `out/`, `exports/`. The rest is projected (v1.L):
 
 ```
 videomill/
@@ -41,7 +41,7 @@ Rules:
 - Steps are keyed by content hash (`out/<slug>/stamps.json`). **Built in v1.C:**
   - `record <capture> <format>`: keyed by URL, anchors and capture settings.
   - `brand <id>` *(v1.F)*: keyed by a hash of `brands/<id>/`; stages it into `media/brand/<id>/` (Remotion publicDir).
-  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`. *(v1.I)* Leading/trailing silence below −50 dB is trimmed to 50 ms (`trimSilence()`): Kokoro pads each phrase with about 0.4 s, which stacked into > 1 s gaps.
+  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`. *(v1.I)* Leading/trailing silence below −50 dB is trimmed to 50 ms (`trimSilence()`): Kokoro pads each phrase with about 0.4 s, which stacked into > 1 s gaps. *(v1.K)* The voice gets `speakable(text)`: domains have their dots spoken ("lamill.io" → "lamill dot io"; Kokoro said "lamillio"). The cache key uses the spoken form, and captions keep the written text.
   - `render <scene> <format>`: keyed by props, the capture stamp and `compositionHash()`.
   - `render @intro|@end-card <format>` *(v1.F)*: brand cards, keyed by props + brand hashes + `compositionHash()`.
   - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat (video stream-copied, audio re-encoded) to `scenes/joined-<format>.mp4`.
@@ -100,7 +100,8 @@ Rules:
 - `src/brand/schema.ts`: `loadBrand()` (typed errors per field path; id must equal the folder; every asset must exist), `isDark()`.
 - `src/brand/cards.ts`: `brandHash()`, `stageBrand()`, `cardBrand(brand, background)` (resolves publicDir paths, picks the logo variant for the background), `textFont()`.
 - `src/remotion/BrandCard.tsx`: `intro` / `end` variants inside `SAFE_ZONE`, spring-in, and the opener fades out. `src/remotion/fonts.ts` `useFonts()` registers brand font files via `FontFace` and holds the frame with `delayRender`. Captions use the brand text font.
-- End-card length = max(`endCard.seconds`, `say` audio + 0.6 s); `say` is voiced like a phrase (`tts end-card`).
+- End-card length = max(`endCard.seconds`, `say` audio + 0.6 s); `say` is voiced like a phrase (`tts end-card`). *(v1.K)* A project's `endCard` replaces the brand's; an optional `tagline` sits above the CTA.
+- *(v1.K)* A `title` card whose `caption` equals its typed `text` puts that caption in the SRT only; it isn't burned in under the same words.
 
 ### Storyboard and approval (v1.G)
 
@@ -177,6 +178,7 @@ Validated by zod (`src/project/schema.ts`, strict: unknown keys are errors). Exa
 | `captures[]` | `{ id, url, extension? }`, pages to record *(added v1.C)*. *(v1.J)* `extension: { name, outputs: [{ id, click, yields: "download" \| "page" }] }` also records that extension's popup on this page and what clicking each named popup button produces |
 | `scenes[]` | see below; ordered, non-empty, unique ids |
 | `publish?` | `{ title, description, hashtags[], channels[], utm{medium,campaign,content} }`, copied into the manifest (v1.H) |
+| `endCard?` | *(v1.K)* the brand end-card shape (`brands/<id>/brand.json`); replaces the brand's end card for this video. Part of `approvalHash()` |
 
 Page scene (`kind: "page-scroll"`):
 
@@ -243,7 +245,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `colors` | `{ primary, onPrimary, background, text, muted }`, `#rrggbb`; `primary` = CTA |
 | `fonts` | `{ text, cta? }`, each `{ family, file?, uppercase=false }`; no `file` = system sans |
 | `voice?` | TTS voice when the project sets none |
-| `endCard?` | `{ headline, url, seconds=2, say? }`, appended after the last scene (default 3 → 2 in v1.I) |
+| `endCard?` | `{ headline, url, tagline?, seconds=2, say? }`, appended after the last scene (default 3 → 2 in v1.I). *(v1.K)* `tagline` is a line above the CTA; a project's own `endCard` replaces this one |
 | `parent?` | `{ brand, opener=false, intro="Introducing", introSeconds=1.5, signoff="Part of" }`, the brand that presents this one: end-card sign-off, plus the opener when `opener` *(added v1.I)* |
 
 ## 4. Modules
@@ -259,6 +261,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** + visible text-run boxes JSON (`CaptureMeta` version 3: `{x,y,w,h}` per selector and per text node, device px) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
+| `src/tts/speakable.ts` | *(v1.K)* `speakable()`: the text the voice is given (domains spoken with "dot") |
 | `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` (*v1.J* window chrome, popups), `BrandCard.tsx` (+ `BrandCard-<f>`), `SceneCard.tsx` (+ `SceneCard-<f>`, *v1.J* title/badges), `frame.ts` (*v1.J* window geometry), `fonts.ts` |
 | `src/render/camera.ts` | `planCamera()` shots → segments; `shotsSeconds()`; tests in `camera.test.ts` |
 | `src/render/timeline.ts` | `phrasesOf()`, `timeScene()`: phrase audio lengths → timed shots + phrase windows; tests in `timeline.test.ts` |
@@ -322,7 +325,7 @@ Runs inside the container (`make buildsh`, then `pnpm videomill …`), or via a 
 
 ## 8. Active implementation plans
 
-None in progress. Next, v1.K reproduces the Fiverr reference for `save-page-pdf-md` (`prd.md § 5` design notes).
+None in progress. v1.L (first lamill.io build-in-public video) is next.
 
 ## 9. Risks
 

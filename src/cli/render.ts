@@ -20,6 +20,7 @@ import { planCamera } from "../render/camera.js";
 import { compositionHash, concatClips, contactSheet, normalizeLoudness, probeDurationSec, renderClip, trimSilence, writeSrt, type Clip } from "../render/render.js";
 import { phrasesOf, popupsOf, timeScene } from "../render/timeline.js";
 import { getTtsProvider, type TtsProvider } from "../tts/provider.js";
+import { speakable } from "../tts/speakable.js";
 
 export type RunOpts = { force: boolean; scene?: string; format?: Format };
 
@@ -85,12 +86,13 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
   // Narration per phrase, cached by text + voice so editing one phrase re-voices only that phrase.
   let tts: TtsProvider | undefined;
   const voiced = async (name: string, text: string, force: boolean) => {
-    const key = hashOf({ text, voice, provider: "kokoro", trim: QA.silenceFloorDb });
+    const spoken = speakable(text); // "lamill.io" → "lamill dot io" for the voice only (v1.K)
+    const key = hashOf({ text: spoken, voice, provider: "kokoro", trim: QA.silenceFloorDb });
     const file = `tts/${key}.wav`;
     await step(stamps, name, key, [join(media, file)], async () => {
       tts ??= await getTtsProvider("kokoro");
       const t0 = performance.now();
-      const r = await tts.synthesize(text, voice, join(media, file));
+      const r = await tts.synthesize(spoken, voice, join(media, file));
       trimSilence(join(media, file), QA.silenceFloorDb);
       info(`${r.durationSec.toFixed(2)}s audio in ${((performance.now() - t0) / 1000).toFixed(2)}s — "${text}"`);
     }, force);
@@ -103,7 +105,8 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
       audio[s.id].push(ph.say ? await voiced(`tts ${s.id}#${i + 1}`, ph.say, opts.force && (!opts.scene || opts.scene === s.id)) : { sec: 0 });
     }
   }
-  const endSay = brand.endCard?.say ? await voiced("tts end-card", brand.endCard.say, opts.force && !opts.scene) : undefined;
+  const endCard = p.endCard ?? brand.endCard; // a project's own end card wins (v1.K)
+  const endSay = endCard?.say ? await voiced("tts end-card", endCard.say, opts.force && !opts.scene) : undefined;
 
   /** The image a page scene's camera moves over (the page, or an extension output's view), its window and popups (v1.J). */
   const pageScene = (s: Scene, f: Format) => {
@@ -187,10 +190,10 @@ export async function render(slug: string, opts: RunOpts): Promise<void> {
       offset += durationInFrames / FPS;
       frames += durationInFrames;
     }
-    if (brand.endCard) {
-      const e = brand.endCard;
+    if (endCard) {
+      const e = endCard;
       await card("@end-card", {
-        variant: "end", brand: cardBrand(brand), headline: e.headline, url: e.url, audio: endSay?.file,
+        variant: "end", brand: cardBrand(brand), headline: e.headline, url: e.url, tagline: e.tagline, audio: endSay?.file,
         signoff: brand.parent && parent ? { text: brand.parent.signoff, parent: cardBrand(parent, brand.colors.background) } : undefined,
         durationInFrames: Math.ceil(Math.max(e.seconds, endSay ? endSay.sec + 0.6 : 0) * FPS),
       });

@@ -22,6 +22,7 @@ export type BrandCardProps =
       brand: CardBrand;
       headline: string;
       url: string;
+      tagline?: string; // v1.K: a line above the CTA
       signoff?: { text: string; parent: CardBrand };
       audio?: string;
       durationInFrames: number;
@@ -58,6 +59,11 @@ export const BrandCard: React.FC<BrandCardProps> = (props) => {
           </div>
         ) : (
           <>
+            {props.tagline && (
+              <div style={{ ...rise(3), color: brand.colors.text, fontSize: 40 * u, fontWeight: 600, fontFamily: fontStack(brand.cta ?? brand.text), textTransform: brand.cta?.uppercase ? "uppercase" : "none", letterSpacing: 2 * u }}>
+                {props.tagline}
+              </div>
+            )}
             <div
               style={{
                 ...rise(6), backgroundColor: brand.colors.primary, color: brand.colors.onPrimary,

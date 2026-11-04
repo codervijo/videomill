@@ -85,16 +85,12 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 | v1.H | ✅ done 2026-10-20 | lamillrentals.com end to end — `qa` command (caption overlap, loudness, contact sheet) gates `manifest.json` export (`videomill-export-v1`) |
 | v1.I | ✅ done 2026-10-20 | v1.H defect fixes — parent opener off by default, ≤1 s silence between phrases, ~2 s end card, 9:16 captions at the bottom of the safe zone with content framed above, `qa` caption boxes vs visible anchor boxes, duration targets |
 | v1.J | ✅ done 2026-11-03 | Extension capture + new scene kinds — record the unpacked extension's real popup, Markdown and PDF output; title card, browser frame, popup overlay, file view, badges |
-| v1.K | ⏳ planned | Benchmark: reproduce the Fiverr video's beats for `save-page-pdf-md` in 16:9 + 9:16, voice-over, `qa` + export |
+| v1.K | ✅ done 2026-11-03 | Benchmark: reproduce the Fiverr video's beats for `save-page-pdf-md` in 16:9 + 9:16, voice-over, `qa` + export |
 | v1.L | ⏳ planned | First lamill.io build-in-public video |
 
 #### Design notes
 
-- **v1.K** — reproduce the reference's beats (§ 7) for the same extension. Quality bar = the Fiverr video.
-  - **Audio (operator, 2026-11-03):** Kokoro voice-over + captions, no music. The reference was taken off YouTube after a copyright claim by "Free To Use", apparently on its music.
-  - **Pages (operator):** Project Gutenberg (public domain) for every page beat, including "Want just the article?"; no Daily Mail or other third-party news content.
-  - **Reference beats (36.8 s, 16:9, on-screen text on a LaMill-blue background):** typed headline "Save any web page as Markdown or PDF in one click." → "Want just the article?" over a cluttered article → "LaMill · One click. A cleaner page." → "Save it as Markdown." (popup → `.md` in an editor) → "Or save it as PDF." (popup → print dialog → clean print view) → badges "Runs 100% locally · Nothing uploaded · Free to use" → "Save smarter. Stay private." → end card "Useful tools for real work · Install Free · lamill.io".
-  - **Carried from v1.J (2026-11-03):** the demo `projects/save-page-pdf-md/` ends on the `lamill` brand's "Start a project → lamill.io" card. The reference ends "Install Free · lamill.io", so the extension needs its own end card. The project is typed `site-promo`, the closest existing type.
+(None in progress — v1.L, the first build-in-public video, is next.)
 
 ## 6. Conformance rules
 

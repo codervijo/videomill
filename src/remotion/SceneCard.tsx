@@ -73,7 +73,8 @@ export const SceneCard: React.FC<SceneCardProps> = (props) => {
       </div>
       {props.phrases.map((p, i) => (
         <Sequence key={i} from={p.start} durationInFrames={p.end - p.start} layout="none">
-          {p.caption && <Caption text={p.caption} vertical={vertical} font={brand.text} />}
+          {/* A title's caption that repeats its typed text goes to the SRT only, not on screen twice. */}
+          {p.caption && !(props.variant === "title" && p.caption === props.text) && <Caption text={p.caption} vertical={vertical} font={brand.text} />}
           {p.audio && <Audio src={staticFile(p.audio)} />}
         </Sequence>
       ))}

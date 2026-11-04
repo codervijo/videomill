@@ -12,6 +12,27 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
 
 (Entries below, newest first.)
 
+## v1.K — Benchmark: the Fiverr reference remade for `save-page-pdf-md` (shipped 2026-11-03)
+
+- **v1.K** — reproduce the reference's beats (§ 7) for the same extension. Quality bar = the Fiverr video.
+  - **Audio (operator, 2026-11-03):** Kokoro voice-over + captions, no music. The reference was taken off YouTube after a copyright claim by "Free To Use", apparently on its music.
+  - **Pages (operator):** Project Gutenberg (public domain) for every page beat, including "Want just the article?"; no Daily Mail or other third-party news content.
+  - **Reference beats (36.8 s, 16:9, on-screen text on a LaMill-blue background):** typed headline "Save any web page as Markdown or PDF in one click." → "Want just the article?" over a cluttered article → "LaMill · One click. A cleaner page." → "Save it as Markdown." (popup → `.md` in an editor) → "Or save it as PDF." (popup → print dialog → clean print view) → badges "Runs 100% locally · Nothing uploaded · Free to use" → "Save smarter. Stay private." → end card "Useful tools for real work · Install Free · lamill.io".
+  - **End card (operator, 2026-11-03):** a project-level `endCard` overrides the brand's ("Useful tools for real work · Install free · lamill.io", lamill.io's own tagline), so every extension needn't be a brand.
+  - **Type (operator):** stays `site-promo`; no change to the export contract RankMill reads.
+  - **Copy sources:** the extension's landing page (`sites/lamill.io/src/content/extension-pages/save-page-pdf-md.ts`), its popup and store tagline, LaMill's own description of the reference video, and lamill.io's tagline.
+  - **Seen:** that landing page still embeds the reference's YouTube ID, which was removed; its embed is broken (a lamill.io fix, not VideoMill's).
+- **Built:**
+  - a project-level `endCard` (brand end-card shape plus an optional `tagline` above the CTA), covered by approval;
+  - a `title` card whose caption repeats its typed text goes to the SRT only;
+  - `speakable()` (`src/tts/speakable.ts`) gives Kokoro "lamill dot io" for "lamill.io". The operator heard "lamillio" as one word. Only the voice changes; captions and screen keep the domain. Every project gets it, so `lamillrentals-promo`'s "Get a quote at lamillrentals.com." re-voices as "lamillrentals dot com" on its next render. Its existing export is unchanged.
+- **Real run 2026-11-03:**
+  - The operator approved (hash `211d319efd6ce788`) → render → `qa` passed both formats: −14.0 LUFS, TP −1.5, 29.2 s, inside the 9:16 30 s cap.
+  - Operator: "almost perfect", except the end card said "lamillio". That was fixed with `speakable()` and re-rendered; `qa` passed again.
+  - Exported to `exports/save-page-pdf-md/`.
+- **Script:** typed headline → page in a browser window → "One click. A cleaner page." → popup, then popup after the Markdown save → the real `.md` in an editor → popup after the PDF click → print view → badges → "Save smarter. Stay private." → end card. Ten captions.
+- Tests: 33 total (+2: end-card override, speakable).
+
 ## v1.J — Extension capture + new scene kinds (shipped 2026-11-03)
 
 - **v1.J / v1.K split (operator, 2026-11-03):** the benchmark was one phase; extension capture + new visuals is v1.J, the remake itself v1.K, build-in-public → v1.L.

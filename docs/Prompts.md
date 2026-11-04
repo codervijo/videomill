@@ -116,3 +116,11 @@
 > commit v1.J and push. i think that video is perfect and i am quite dumbfounded at what just happened
 
 > commit the prompt log and push
+
+> show me the video again
+
+> start v1.K
+
+> approve save-page-pdf-md and render, qa, show me
+
+> export and commit v1.K and push, almost perfect except for how it says "lamillio" as if its one waord - and it should "lamill" "dot" "io"
