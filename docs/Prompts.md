@@ -86,3 +86,7 @@
 > pwd
 
 > commit the prompt log and push
+
+> how far did we get on videomill?
+
+> commit the prd change and push and show me the video - open in chrome

@@ -100,7 +100,7 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 ## 7. Open questions
 
-- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.J (benchmark). **Partly answered 2026-10-20:** the video is mounted from a host path to `.cache/reference/` (outside git); reproduce the same extension with the same script beats as the Fiverr video. **Still open:** the host path of the video and the extension's location (unpacked path or repo) — the operator is still waiting on the video.
+- **2026-10-20 — Fiverr reference video + its extension.** Needed for v1.J (benchmark). **Partly answered 2026-10-20:** the video is mounted from a host path to `.cache/reference/` (outside git); reproduce the same extension with the same script beats as the Fiverr video. **Video answered 2026-10-23:** it's LaMill's own YouTube upload "Save Any Web Page as Markdown or PDF in One Click (Free Chrome Extension)" (https://www.youtube.com/watch?v=h2GWC_BamQQ), downloaded with yt-dlp to `.cache/reference/h2GWC_BamQQ.mp4` (1920×1080, 60 fps, AV1 + AAC, 36.8 s). **Still open:** the extension's location (unpacked path or repo).
 
 Resolved in v1.A (2026-10-20): CLI language → all TypeScript (ADR-0002); container recipe → new builder `video` stack (ADR-0003); TTS → Kokoro behind a provider interface (ADR-0004); export contract → `videomill-export-v1` (ADR-0005); v1 channels → YouTube + X only, TikTok deferred to v2 or later.
 
