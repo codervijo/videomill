@@ -162,3 +162,5 @@
 > export and commit v1.M and push
 
 > approve videomill-build-update and export, commit, push
+
+> commit the prompt log and push
