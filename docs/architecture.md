@@ -41,7 +41,7 @@ Rules:
 - Steps are keyed by content hash (`out/<slug>/stamps.json`). **Built in v1.C:**
   - `record <capture> <format>`: keyed by URL, anchors and capture settings.
   - `brand <id>` *(v1.F)*: keyed by a hash of `brands/<id>/`; stages it into `media/brand/<id>/` (Remotion publicDir).
-  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`. *(v1.I)* Leading/trailing silence below −50 dB is trimmed to 50 ms (`trimSilence()`): Kokoro pads each phrase with about 0.4 s, which stacked into > 1 s gaps. *(v1.K)* The voice gets `speakable(text)`: domains have their dots spoken ("lamill.io" → "lamill dot io"; Kokoro said "lamillio"). The cache key uses the spoken form, and captions keep the written text.
+  - `tts <scene>#<n>` *(per phrase since v1.E)*: keyed by phrase text + voice; the WAV is cached at `media/tts/<hash>.wav`. *(v1.I)* Leading/trailing silence below −50 dB is trimmed to 50 ms (`trimSilence()`): Kokoro pads each phrase with about 0.4 s, which stacked into > 1 s gaps. *(v1.K)* The voice gets `speakable(text)`: domains have their dots spoken, `.io`/`.ai` are spelled out, and "LaMill" is respelled "La Mill" (operator; Kokoro said "lamillio"). So "lamill.io" is voiced "La Mill dot I O". The cache key uses the spoken form, and captions keep the written text.
   - `render <scene> <format>`: keyed by props, the capture stamp and `compositionHash()`.
   - `render @intro|@end-card <format>` *(v1.F)*: brand cards, keyed by props + brand hashes + `compositionHash()`.
   - `assemble <format>`: keyed by the list of scene render hashes; ffmpeg concat (video stream-copied, audio re-encoded) to `scenes/joined-<format>.mp4`.
@@ -261,7 +261,7 @@ zod-validated (`src/brand/schema.ts`, strict). Asset paths are relative to the b
 | `src/record/site.ts` | Playwright capture of a live page per format: full-page PNG + anchor **boxes** + visible text-run boxes JSON (`CaptureMeta` version 3: `{x,y,w,h}` per selector and per text node, device px) |
 | `src/tts/provider.ts` | `TtsProvider` interface + `getTtsProvider(id)` (ADR-0004) |
 | `src/tts/kokoro.ts` | Kokoro-82M via kokoro-js, `q8`, CPU; lazy import wrapped in a typed error |
-| `src/tts/speakable.ts` | *(v1.K)* `speakable()`: the text the voice is given (domains spoken with "dot") |
+| `src/tts/speakable.ts` | *(v1.K)* `speakable()`: the text the voice is given (domains spoken with "dot", `.io` → "I O", LaMill → "La Mill") |
 | `src/remotion/` | `index.ts` (registerRoot), `Root.tsx` (`PageCamera-16x9` / `PageCamera-9x16`, duration from props), `PageCamera.tsx` (*v1.J* window chrome, popups), `BrandCard.tsx` (+ `BrandCard-<f>`), `SceneCard.tsx` (+ `SceneCard-<f>`, *v1.J* title/badges), `frame.ts` (*v1.J* window geometry), `fonts.ts` |
 | `src/render/camera.ts` | `planCamera()` shots → segments; `shotsSeconds()`; tests in `camera.test.ts` |
 | `src/render/timeline.ts` | `phrasesOf()`, `timeScene()`: phrase audio lengths → timed shots + phrase windows; tests in `timeline.test.ts` |

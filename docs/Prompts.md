@@ -126,3 +126,11 @@
 > export and commit v1.K and push, almost perfect except for how it says "lamillio" as if its one waord - and it should "lamill" "dot" "io"
 
 > commit the prompt log and push
+
+> show me the video again
+
+> lamill is pronounced as "la mill"
+
+> and it is "la mill" "dot" "i" "o" and not "io"
+
+> export and commit and push

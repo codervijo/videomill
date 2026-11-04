@@ -26,6 +26,7 @@ Format per entry: `## vN.X — <title>` (shipped YYYY-MM-DD) with the design rat
   - a project-level `endCard` (brand end-card shape plus an optional `tagline` above the CTA), covered by approval;
   - a `title` card whose caption repeats its typed text goes to the SRT only;
   - `speakable()` (`src/tts/speakable.ts`) gives Kokoro "lamill dot io" for "lamill.io". The operator heard "lamillio" as one word. Only the voice changes; captions and screen keep the domain. Every project gets it, so `lamillrentals-promo`'s "Get a quote at lamillrentals.com." re-voices as "lamillrentals dot com" on its next render. Its existing export is unchanged.
+  - Follow-up, same day (operator): "LaMill" is said "La Mill", and `.io` is "I O", not "io". `speakable()` now respells LaMill and spells out `.io`/`.ai`, so "lamill.io" → "La Mill dot I O" (29.4 s). Re-rendered, `qa` passed and re-exported.
 - **Real run 2026-11-03:**
   - The operator approved (hash `211d319efd6ce788`) → render → `qa` passed both formats: −14.0 LUFS, TP −1.5, 29.2 s, inside the 9:16 30 s cap.
   - Operator: "almost perfect", except the end card said "lamillio". That was fixed with `speakable()` and re-rendered; `qa` passed again.
