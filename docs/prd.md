@@ -93,6 +93,53 @@ Order (operator, 2026-10-20): prove the pipeline end to end on **lamillrentals.c
 
 (None in progress — v1 is complete. Later tiers are listed under v1 above, not yet scoped.)
 
+### v2 — UGC look, still faceless
+
+Order (operator, 2026-11-04): native-feeling, user-generated-style videos first, still within goal 4 (no camera, no real voice); an AI avatar follows in v3. Planned, not started.
+
+#### Phases
+
+| Phase | Status | Title |
+|---|---|---|
+| v2.A | planned | Decisions lock — define the "UGC look" from 2–3 operator-picked reference videos; project schema gains `audience`; `type` values renamed (`promo` / `ugc` / `bip`); new export files (`assets.json`, hook variants) against `videomill-export-v1` (ADR-0005) |
+| v2.B | planned | Phone footage — recorded scroll + tap video in a phone frame, not a camera over a screenshot |
+| v2.C | planned | UGC style — hook-first open, word-by-word captions, jump-cut pacing, casual voice preset; **3 hook variants per video**, each CTA URL tagged `utm_content=hook-a` / `hook-b` / `hook-c` |
+| v2.D | planned | Project types — `new --type promo\|ugc\|bip` stored in `project.json`; the type sets defaults (opening, footage, captions, voice, formats) that `new` flags override; `render` gains `--hook`; **client brand profile**, the client's permission recorded in `assets.json`; first UGC video through `qa` + export |
+
+#### Design notes
+
+- **`audience`** is the target audience a video is made for (project-level field). Not "segment": that already means camera and TTS segments in the code.
+- **Type rename:** `site-promo` → `promo`, `build-in-public` → `bip`, plus new `ugc`. Renaming enum values in the locked `videomill-project-v1` bumps it to `-v2` with an ADR (docs/CLAUDE.md § Locked target shapes); v2.A decides how existing projects migrate.
+- **Type defaults:** `type` picks defaults for opening, footage, captions, voice and formats; a project's own fields and `new` flags override them. `render --hook <a|b|c>` renders one hook variant (default: all three).
+- **Hook variants:** one project renders three openings over the same body; each variant is its own export entry. VideoMill only tags the URL; measuring which hook won stays RankMill's job (§ 2).
+- **`assets.json`** (new, per export): every non-captured asset and its provenance — client permission (who, when, scope) in v2.D, avatar outputs in v3.
+- **Client brand:** still operated by the operator alone, so § 2's "no multi-tenant / outside users" holds; the permission record is the gate for rendering a client's brand.
+
+### v3 — AI presenter
+
+Planned, not started. Reverses part of goal 4 and the "generative video" non-goal (§ 2) for the avatar only; footage stays real. That reversal is v3.A's ADR, and v3 needs VideoMill's first paid external dependency.
+
+#### Phases
+
+| Phase | Status | Title |
+|---|---|---|
+| v3.A | planned | Decisions lock — ADR revising goal 4 + the generative-video non-goal for avatars; pick the avatar + voice vendor; disclosure policy |
+| v3.B | planned | Avatar scene kind (avatar speaks the script lines, picture-in-picture over real footage) + AI disclosure: flag in `post.md`, optional "AI presenter" end-card line |
+| v3.C | planned | Avatar guardrails — `qa` blocks first-person testimonial phrasing in avatar lines; `assets.json` logs each avatar output with vendor, license and per-video cost |
+| v3.D | planned | First avatar UGC video through `qa` + export |
+
+#### Design notes
+
+v3 P0 requirements:
+
+| Priority | Requirement |
+|---|---|
+| P0 | AI-disclosure flag in `post.md`; optional "AI presenter" end-card line |
+| P0 | `qa` ✗ on first-person testimonial phrasing from an avatar ("I use…", "it saved me…") — an avatar never poses as a customer |
+| P0 | Every avatar output in `assets.json` with vendor, license terms and per-video cost — cost taken from the vendor's response or invoice, never estimated |
+
+- **`post.md`** doesn't exist yet: it's the per-export post copy (P2 "social captions" in § 3). v3.B introduces it with the disclosure flag; v2.A decides whether it lands earlier.
+
 ## 6. Conformance rules
 
 - Brand spelled **LaMill**, never Lamill, in every rendered frame, caption, SRT and manifest field.

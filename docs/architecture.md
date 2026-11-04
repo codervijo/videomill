@@ -313,7 +313,7 @@ videomill export <slug> [--force]
 Projected command tree (names firmed per phase; no aliases):
 
 ```
-videomill new <slug> --type <site-promo|build-in-public> --brand <id> [--url <u> | --file <md>]   (v1.C)
+videomill new <slug> --type <site-promo|build-in-public> --brand <id> --url <u>              (v1.C; local files via captures[].file, v1.L)
 videomill record <slug>                                  (v1.B/v1.C)
 videomill approve <slug>                                 (v1.G)
 videomill render <slug> [--scene <id>] [--format <f>]    (v1.B → v1.C)

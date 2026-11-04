@@ -164,3 +164,13 @@
 > approve videomill-build-update and export, commit, push
 
 > commit the prompt log and push
+
+> for v2 - let us add UGC support. let us first plan that
+
+> i meant 2 or 3 or both - maybe 2 to start with and then add ai avatar only and just have that speak through something etc. let us just plan for now.
+
+> Add to the plan: v2.A schema gets segment; v2.C renders 3 hook variants per video (utm_content=hook-a/b/c); v2.D adds a client brand profile with permission recorded in assets.json. v3 P0: AI-disclosure flag in post.md and optional “AI presenter” end-card line; qa blocks first-person testimonial phrasing from avatars; avatar outputs logged in assets.json with vendor license and per-video cost. Then split v2 and v3 into the PRD.
+
+> how does videomill CLI look like now?
+
+> Use audience instead of segment for the target-audience field. In v2.D, project type is set at new --type promo|ugc|bip and stored in project.json; type sets defaults (opening, footage, captions, voice, formats) that new flags can override; render gains --hook. Then commit and push.
